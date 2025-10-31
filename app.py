@@ -1,454 +1,317 @@
+#!/usr/bin/env python3
 """
-AI Mental Health Agent - Simplified LangGraph Multi-Agent Application
-Main application implementing LangGraph workflow with specialized mental health agents.
-This version works without sentence-transformers for Python 3.13 compatibility.
+AI Mental Health Support Agent with Full RAG Integration
+A multi-agent system using LangGraph and ChromaDB for knowledge-grounded responses
 """
 
 import os
-from typing import TypedDict, Annotated, Sequence, Literal
-from dotenv import load_dotenv
-from langchain_groq import ChatGroq
-from langchain_community.vectorstores import Chroma
-from langchain_text_splitters import RecursiveCharacterTextSplitter
-from langgraph.graph import StateGraph, END
-from langgraph.graph.message import add_messages
 import chromadb
+from chromadb.utils import embedding_functions
+from langgraph.graph import StateGraph, END
+from langchain_groq import ChatGroq
+from typing import TypedDict, List
+from dotenv import load_dotenv
 
-# Load environment
+# Import modular agents
+from agent import (
+    router_node,
+    crisis_intervention_node,
+    information_agent_node,
+    resource_agent_node,
+    assessment_agent_node,
+    human_escalation_node
+)
+
+# Load environment variables
 load_dotenv()
 
-# Crisis keywords for immediate intervention
-CRISIS_KEYWORDS = [
-    "kill myself", "want to die", "end it all", "commit suicide",
-    "hurt myself", "cut myself", "self harm", "not worth living",
-    "better off dead", "end my life", "take my own life",
-    "no reason to live", "can't go on", "suicide", "suicidal"
-]
+# Initialize ChromaDB
+chroma_client = chromadb.PersistentClient(path="./data/chroma_db")
+embedding_function = embedding_functions.DefaultEmbeddingFunction()
 
 class AgentState(TypedDict):
-    """State for the mental health support agent workflow."""
-    messages: Annotated[Sequence[dict], add_messages]
-    user_query: str
-    next_node: str
+    current_query: str
+    messages: List[str]
+    current_agent: str
     crisis_detected: bool
-    assessment_step: int
-    assessment_data: dict
-    routing_confidence: float
-    retrieved_context: str
+    context: str  # Added for RAG context
 
-def initialize_system():
-    """Initialize LLM and ChromaDB components."""
-    print("Initializing AI Mental Health Support Agent with ChromaDB...")
-    
-    # Initialize LLM
-    groq_api_key = os.getenv("GROQ_API_KEY")
-    if not groq_api_key:
-        raise ValueError("GROQ_API_KEY not found in environment variables. Please check your .env file.")
-    
-    llm = ChatGroq(model="llama-3.3-70b-versatile", temperature=0.7)
-    print("✅ LLM initialized (Groq with Llama 3.3 70B)")
-    
-    # Initialize ChromaDB
-    chroma_client = chromadb.PersistentClient(path="./chroma_db")
-    print("✅ ChromaDB client initialized")
-    
-    # Load or create collections
-    vectorstores = load_chroma_collections(chroma_client)
-    
-    return llm, vectorstores
+# Initialize Groq LLM
+def get_llm():
+    api_key = os.getenv("GROQ_API_KEY")
+    if not api_key:
+        raise ValueError("GROQ_API_KEY not found in environment variables")
+    return ChatGroq(
+        model="llama-3.3-70b-versatile",
+        temperature=0.7,  # Balanced for consistency
+        max_tokens=150,  # Limit response length
+        api_key=api_key
+    )
 
-def load_chroma_collections(chroma_client):
-    """Load or create ChromaDB collections for each knowledge category."""
-    collections = {}
-    categories = [
-        "mental_health_info",
-        "singapore_resources", 
-        "coping_strategies",
-        "dass21_guidelines",
-        "crisis_protocols"
-    ]
-    
-    for category in categories:
-        try:
-            # Try to get existing collection
-            collection = chroma_client.get_collection(name=category)
-            collections[category] = collection
-            print(f"✅ Loaded existing collection: {category}")
-        except:
-            # Create new collection if it doesn't exist
-            collection = chroma_client.create_collection(name=category)
-            collections[category] = collection
-            print(f"🔄 Created new collection: {category}")
-            
-            # Populate with basic data
-            populate_collection(collection, category)
-    
-    return collections
+llm = get_llm()
 
-def populate_collection(collection, category):
-    """Populate ChromaDB collection with knowledge base content."""
-    data_path = f"./data/{category}"
-    
-    if not os.path.exists(data_path):
-        print(f"⚠️ Data directory not found: {data_path}")
-        return
-    
-    documents = []
-    metadatas = []
-    ids = []
-    
-    for filename in os.listdir(data_path):
-        if filename.endswith('.txt'):
-            filepath = os.path.join(data_path, filename)
-            try:
-                with open(filepath, 'r', encoding='utf-8') as file:
-                    content = file.read()
-                    
-                    # Split content into chunks
-                    text_splitter = RecursiveCharacterTextSplitter(
-                        chunk_size=1000,
-                        chunk_overlap=200
-                    )
-                    chunks = text_splitter.split_text(content)
-                    
-                    # Add chunks to collection data
-                    for i, chunk in enumerate(chunks):
-                        documents.append(chunk)
-                        metadatas.append({
-                            "source": filename,
-                            "category": category,
-                            "chunk_id": i
-                        })
-                        ids.append(f"{category}_{filename}_{i}")
-                        
-            except Exception as e:
-                print(f"⚠️ Error reading {filepath}: {e}")
-    
-    if documents:
-        try:
-            collection.add(
-                documents=documents,
-                metadatas=metadatas,
-                ids=ids
-            )
-            print(f"✅ Added {len(documents)} documents to {category}")
-        except Exception as e:
-            print(f"⚠️ Error adding documents to {category}: {e}")
-
-def query_chroma_collection(collections, category, query, n_results=3):
-    """Query ChromaDB collection for relevant documents."""
-    if category not in collections:
-        return "No relevant information found."
-    
+# RAG Helper Functions
+def get_relevant_context(query: str, n_results: int = 3) -> str:
+    """Retrieve relevant context from ChromaDB for RAG."""
     try:
-        results = collections[category].query(
+        collection = chroma_client.get_collection("mental_health_kb")
+        results = collection.query(
             query_texts=[query],
             n_results=n_results
         )
         
-        if results['documents'] and results['documents'][0]:
-            # Combine the retrieved documents
-            context = "\n\n".join(results['documents'][0])
-            return context
-        else:
-            return "No relevant information found."
+        if results and results['documents'] and results['documents'][0]:
+            # Combine retrieved documents
+            context_pieces = []
+            for i, doc in enumerate(results['documents'][0]):
+                metadata = results['metadatas'][0][i] if results['metadatas'] else {}
+                source = metadata.get('source', 'Knowledge Base')
+                context_pieces.append(f"[Source: {source}]\n{doc}")
             
+            return "\n\n---\n\n".join(context_pieces)
+        else:
+            return "No specific information found in knowledge base."
     except Exception as e:
-        print(f"⚠️ Error querying {category}: {e}")
-        return "No relevant information found."
+        print(f"ChromaDB query error: {e}")
+        return "Unable to retrieve context at this time."
 
-def detect_crisis(query: str) -> bool:
-    """Detect crisis situations in user query."""
-    query_lower = query.lower()
-    return any(keyword in query_lower for keyword in CRISIS_KEYWORDS)
-
-def get_crisis_resources() -> str:
-    """Return immediate crisis resources."""
-    return """
-🚨 IMMEDIATE HELP AVAILABLE 🚨
-
-If you're in immediate danger, please contact:
-• Emergency Services: 995 (Singapore)
-• Samaritans of Singapore: 1767 (24/7)
-• Institute of Mental Health Emergency: 6389-2222
-
-You are not alone. Help is available right now.
-
-Online Support:
-• SOS (Samaritans): Call 1767 or visit sos.org.sg
-• IMH CHAT (16-30 years): 6493-6500/6501
-• Silver Ribbon Suicide Prevention: suicideprevention.sg
-
-Remember: This crisis will pass. You matter. There are people who want to help you.
-"""
-
-def router_agent(state: AgentState) -> dict:
-    """Route user queries to appropriate agents."""
-    query = state["user_query"]
-    
-    # Check for crisis first
-    if detect_crisis(query):
-        return {
-            "next_node": "crisis_agent",
-            "crisis_detected": True,
-            "routing_confidence": 1.0
-        }
-    
-    # Simple keyword-based routing (without embeddings)
-    query_lower = query.lower()
-    
-    if any(word in query_lower for word in ["assess", "test", "scale", "dass", "questionnaire"]):
-        return {"next_node": "assessment_agent", "routing_confidence": 0.8}
-    elif any(word in query_lower for word in ["help", "service", "doctor", "therapist", "where"]):
-        return {"next_node": "resource_agent", "routing_confidence": 0.7}
-    else:
-        return {"next_node": "info_agent", "routing_confidence": 0.6}
-
-def crisis_agent(state: AgentState) -> dict:
-    """Handle crisis situations immediately."""
-    llm, vectorstores = initialize_system()
-    
-    crisis_prompt = f"""
-You are a crisis intervention specialist. The user has expressed thoughts that may indicate a mental health crisis.
-
-User message: {state['user_query']}
-
-IMPORTANT: Always provide immediate crisis resources and emotional support. Be empathetic but direct.
-
-Provide:
-1. Immediate validation of their feelings
-2. Crisis hotline numbers and resources
-3. Encourage immediate professional help
-4. Reassurance that help is available
-
-Be warm, caring, and non-judgmental while emphasizing safety.
-"""
-    
+def initialize_chroma():
+    """Initialize ChromaDB with knowledge base documents."""
     try:
-        response = llm.invoke(crisis_prompt)
-        crisis_resources = get_crisis_resources()
+        # Try to get existing collection
+        collection = chroma_client.get_collection("mental_health_kb")
+        print("✅ ChromaDB collection already exists and loaded")
+        return collection
+    except:
+        # Create new collection and populate it
+        print("📚 Creating and populating ChromaDB collection...")
+        collection = chroma_client.create_collection(
+            name="mental_health_kb",
+            embedding_function=embedding_function
+        )
         
-        return {
-            "messages": [{"role": "assistant", "content": f"{response.content}\n\n{crisis_resources}"}],
-            "crisis_detected": True
-        }
-    except Exception as e:
-        return {
-            "messages": [{"role": "assistant", "content": f"I'm concerned about you and want to help. {get_crisis_resources()}"}],
-            "crisis_detected": True
-        }
+        # Load documents from knowledge directory
+        knowledge_dir = "data/knowledge"
+        documents = []
+        
+        if os.path.exists(knowledge_dir):
+            for root, dirs, files in os.walk(knowledge_dir):
+                for file in files:
+                    if file.endswith('.txt'):
+                        file_path = os.path.join(root, file)
+                        try:
+                            with open(file_path, 'r', encoding='utf-8') as f:
+                                content = f.read()
+                                
+                            # Split into chunks for better retrieval
+                            chunks = split_into_chunks(content, max_length=1000)
+                            
+                            for i, chunk in enumerate(chunks):
+                                documents.append({
+                                    'content': chunk,
+                                    'source': file,
+                                    'chunk_id': f"{file}_{i}",
+                                    'category': os.path.basename(root)
+                                })
+                        except Exception as e:
+                            print(f"Error reading {file_path}: {e}")
+        
+        # Add documents to ChromaDB
+        if documents:
+            collection.add(
+                documents=[doc['content'] for doc in documents],
+                metadatas=[{
+                    'source': doc['source'], 
+                    'category': doc['category'],
+                    'chunk_id': doc['chunk_id']
+                } for doc in documents],
+                ids=[doc['chunk_id'] for doc in documents]
+            )
+            print(f"✅ Added {len(documents)} document chunks to ChromaDB")
+        else:
+            print("⚠️ No documents found in data directory")
+        
+        return collection
 
-def info_agent(state: AgentState) -> dict:
-    """Provide mental health information using ChromaDB context."""
-    llm, vectorstores = initialize_system()
+def split_into_chunks(text: str, max_length: int = 1000) -> List[str]:
+    """Split text into chunks for better retrieval."""
+    paragraphs = text.split('\n\n')
+    chunks = []
+    current_chunk = ""
     
-    # Retrieve relevant context from ChromaDB
-    context = query_chroma_collection(vectorstores, "mental_health_info", state['user_query'])
-    coping_context = query_chroma_collection(vectorstores, "coping_strategies", state['user_query'])
+    for paragraph in paragraphs:
+        if len(current_chunk + paragraph) < max_length:
+            current_chunk += paragraph + "\n\n"
+        else:
+            if current_chunk:
+                chunks.append(current_chunk.strip())
+            current_chunk = paragraph + "\n\n"
     
-    info_prompt = f"""
-You are a knowledgeable mental health educator. Use the following context to provide helpful, evidence-based information.
-
-User question: {state['user_query']}
-
-Relevant information from knowledge base:
-{context}
-
-Coping strategies context:
-{coping_context}
-
-Provide:
-1. Clear, accurate information based on the context
-2. Evidence-based strategies when appropriate
-3. Encouragement to seek professional help for serious concerns
-4. Normalize mental health discussions
-
-Be supportive, informative, and professional. Avoid diagnosing or providing medical advice.
-"""
+    if current_chunk:
+        chunks.append(current_chunk.strip())
     
-    try:
-        response = llm.invoke(info_prompt)
-        return {"messages": [{"role": "assistant", "content": response.content}]}
-    except Exception as e:
-        return {"messages": [{"role": "assistant", "content": "I'd be happy to help with mental health information. Could you please rephrase your question?"}]}
+    return chunks
 
-def resource_agent(state: AgentState) -> dict:
-    """Connect users with mental health resources using ChromaDB context."""
-    llm, vectorstores = initialize_system()
-    
-    # Retrieve relevant Singapore resources from ChromaDB
-    context = query_chroma_collection(vectorstores, "singapore_resources", state['user_query'])
-    
-    resource_prompt = f"""
-You are a Singapore mental health resource specialist. Use the following context to provide helpful resource information.
+# Wrapper functions to pass dependencies to modular agents
+def router_wrapper(state: AgentState) -> AgentState:
+    """Wrapper for router agent."""
+    return router_node(state, llm, get_relevant_context)
 
-User question: {state['user_query']}
+def crisis_wrapper(state: AgentState) -> AgentState:
+    """Wrapper for crisis intervention agent."""
+    return crisis_intervention_node(state, llm, get_relevant_context)
 
-Singapore mental health resources from knowledge base:
-{context}
+def information_wrapper(state: AgentState) -> AgentState:
+    """Wrapper for information agent."""
+    return information_agent_node(state, llm, get_relevant_context)
 
-Provide:
-1. Specific Singapore mental health services relevant to their query
-2. Contact information and addresses
-3. Eligibility criteria and costs where applicable
-4. How to access these services
-5. Emergency contacts if needed
+def resource_wrapper(state: AgentState) -> AgentState:
+    """Wrapper for resource agent."""
+    return resource_agent_node(state, llm, get_relevant_context)
 
-Be practical, specific, and helpful. Focus on actionable next steps.
-"""
-    
-    try:
-        response = llm.invoke(resource_prompt)
-        return {"messages": [{"role": "assistant", "content": response.content}]}
-    except Exception as e:
-        # Fallback to basic resources if LLM fails
-        basic_resources = """
-Singapore Mental Health Resources:
+def assessment_wrapper(state: AgentState) -> AgentState:
+    """Wrapper for assessment agent."""
+    return assessment_agent_node(state, llm, get_relevant_context)
 
-🚨 **Emergency**: 995
-📞 **Crisis Support**: SOS 1767 (24/7)
-🏥 **IMH**: 6389-2000
-🌟 **CHAT** (16-30 years): 6493-6500/6501
+def escalation_wrapper(state: AgentState) -> AgentState:
+    """Wrapper for human escalation agent."""
+    return human_escalation_node(state, llm, get_relevant_context)
 
-Visit your nearest polyclinic for mental health services or contact IMH directly.
-"""
-        return {"messages": [{"role": "assistant", "content": basic_resources}]}
-
-def assessment_agent(state: AgentState) -> dict:
-    """Guide users through mental health assessment using ChromaDB context."""
-    llm, vectorstores = initialize_system()
-    
-    # Retrieve relevant DASS-21 and assessment context from ChromaDB
-    context = query_chroma_collection(vectorstores, "dass21_guidelines", state['user_query'])
-    
-    assessment_prompt = f"""
-You are a mental health assessment specialist. Use the following context to provide helpful assessment information.
-
-User question: {state['user_query']}
-
-Assessment guidelines from knowledge base:
-{context}
-
-Provide:
-1. Information about appropriate mental health assessment tools
-2. What to expect during professional assessments
-3. How to prepare for assessments
-4. Where to get professional assessments in Singapore
-5. Limitations of self-assessment tools
-
-Be informative and encouraging while emphasizing the importance of professional evaluation.
-"""
-    
-    try:
-        response = llm.invoke(assessment_prompt)
-        return {"messages": [{"role": "assistant", "content": response.content}]}
-    except Exception as e:
-        # Fallback assessment information
-        fallback_info = """
-Mental Health Assessment Information:
-
-🔍 **Professional Assessment Recommended**
-For proper mental health assessment, please contact:
-- IMH: 6389-2000 
-- CHAT (ages 16-30): 6493-6500/6501
-- Your family doctor
-
-Assessment tools like DASS-21 can provide insights but should be interpreted by professionals.
-"""
-        return {"messages": [{"role": "assistant", "content": fallback_info}]}
-
+# Create the workflow
 def create_workflow():
-    """Create the LangGraph workflow."""
+    """Create the RAG-enhanced LangGraph workflow."""
     workflow = StateGraph(AgentState)
     
-    # Add nodes
-    workflow.add_node("router", router_agent)
-    workflow.add_node("crisis_agent", crisis_agent)
-    workflow.add_node("info_agent", info_agent)
-    workflow.add_node("resource_agent", resource_agent)
-    workflow.add_node("assessment_agent", assessment_agent)
+    # Add nodes with wrapper functions
+    workflow.add_node("router", router_wrapper)
+    workflow.add_node("crisis_intervention", crisis_wrapper)
+    workflow.add_node("information", information_wrapper)
+    workflow.add_node("resource", resource_wrapper)
+    workflow.add_node("assessment", assessment_wrapper)
+    workflow.add_node("human_escalation", escalation_wrapper)
     
     # Set entry point
     workflow.set_entry_point("router")
     
-    # Add routing logic
-    def route_after_router(state: AgentState) -> str:
-        return state["next_node"]
+    # Add conditional edges from router
+    def route_to_agent(state):
+        return state["current_agent"]
     
     workflow.add_conditional_edges(
         "router",
-        route_after_router,
+        route_to_agent,
         {
-            "crisis_agent": "crisis_agent",
-            "info_agent": "info_agent", 
-            "resource_agent": "resource_agent",
-            "assessment_agent": "assessment_agent"
+            "crisis_intervention": "crisis_intervention",
+            "information": "information", 
+            "resource": "resource",
+            "assessment": "assessment",
+            "human_escalation": "human_escalation"
         }
     )
     
     # All agents end the workflow
-    workflow.add_edge("crisis_agent", END)
-    workflow.add_edge("info_agent", END)
-    workflow.add_edge("resource_agent", END)
-    workflow.add_edge("assessment_agent", END)
+    workflow.add_edge("crisis_intervention", END)
+    workflow.add_edge("information", END)
+    workflow.add_edge("resource", END)
+    workflow.add_edge("assessment", END)
+    workflow.add_edge("human_escalation", END)
     
     return workflow.compile()
 
-def run_mental_health_agent():
-    """Main function to run the mental health agent."""
+def check_for_data_updates():
+    """Check for new/modified data and perform smart update if needed."""
     try:
-        # Initialize system
-        llm, vectorstores = initialize_system()
+        # Import update agent from agent module
+        from agent import UpdateAgent
         
-        # Create workflow
+        agent = UpdateAgent()
+        print("\n🔍 Checking for data updates...")
+        
+        # Check for changes
+        has_changes = agent.check_for_updates()
+        
+        if has_changes:
+            print("🔄 Performing smart update...")
+            agent.perform_smart_update()
+            print("✅ ChromaDB updated with new data")
+            return True
+        else:
+            return False
+            
+    except ImportError:
+        # Update agent not available, skip check
+        return False
+    except Exception as e:
+        print(f"⚠️  Update check error: {e}")
+        return False
+
+def main():
+    """Main application with full RAG integration."""
+    print("🧠 AI Mental Health Support Agent (RAG-Enhanced)")
+    print("=" * 60)
+    
+    # Check for data updates before initializing
+    check_for_data_updates()
+    
+    # Initialize ChromaDB
+    try:
+        collection = initialize_chroma()
+        print("✅ ChromaDB initialized successfully")
+    except Exception as e:
+        print(f"❌ ChromaDB initialization error: {e}")
+        return
+    
+    # Test RAG functionality
+    print("\n🔍 Testing RAG retrieval...")
+    test_context = get_relevant_context("CHAT services Singapore youth", n_results=2)
+    print("✅ RAG retrieval working")
+    
+    # Create workflow
+    try:
         app = create_workflow()
-        print("✅ LangGraph workflow compiled successfully")
-        
-        print("\n🤖 AI Mental Health Support Agent Ready!")
-        print("Type 'quit' to exit")
-        print("=" * 50)
-        
-        while True:
-            user_input = input("\nYou: ").strip()
+        print("✅ LangGraph workflow created")
+    except Exception as e:
+        print(f"❌ Workflow creation error: {e}")
+        return
+    
+    print("\n🤖 Mental Health Support Agent Ready!")
+    print("Type 'quit' to exit")
+    print("-" * 60)
+    
+    while True:
+        try:
+            user_input = input("\n💭 How can I support your mental health today? ")
             
             if user_input.lower() in ['quit', 'exit', 'bye']:
-                print("Take care! Remember, help is always available when you need it.")
+                print("\n💙 Take care! Remember, support is always available when you need it.")
                 break
-                
-            if not user_input:
-                print("Please enter your question or concern.")
+            
+            if not user_input.strip():
                 continue
             
-            # Create initial state
+            # Initialize state
             initial_state = {
-                "messages": [{"role": "user", "content": user_input}],
-                "user_query": user_input,
-                "next_node": "",
+                "current_query": user_input,
+                "messages": [],
+                "current_agent": "",
                 "crisis_detected": False,
-                "assessment_step": 0,
-                "assessment_data": {},
-                "routing_confidence": 0.0,
-                "retrieved_context": ""
+                "context": ""
             }
             
-            try:
-                # Run the workflow
-                result = app.invoke(initial_state)
+            # Run the workflow with RAG
+            result = app.invoke(initial_state)
+            
+            # Display response
+            print("\n🤖 AI Mental Health Agent:")
+            for message in result["messages"]:
+                print(message)
                 
-                # Display response
-                if result["messages"]:
-                    assistant_message = result["messages"][-1]["content"]
-                    print(f"\nAssistant: {assistant_message}")
-                
-            except Exception as e:
-                print(f"\nI apologize, but I encountered an error. Please try rephrasing your question.")
-                print("If you're in crisis, please contact emergency services (995) or SOS (1767) immediately.")
-                
-    except KeyboardInterrupt:
-        print("\n\nGoodbye! Remember, support is always available when you need it.")
-    except Exception as e:
-        print(f"Error initializing system: {e}")
-        print("Please check your .env file and ensure GROQ_API_KEY is set.")
+        except KeyboardInterrupt:
+            print("\n\n💙 Take care! Support is always available.")
+            break
+        except Exception as e:
+            print(f"\n❌ Error: {e}")
+            print("Let me try to help in a different way...")
 
 if __name__ == "__main__":
-    run_mental_health_agent()
+    main()
