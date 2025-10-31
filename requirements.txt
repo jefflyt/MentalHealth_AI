@@ -1,0 +1,27 @@
+# CHROMADB COMPATIBLE - Works with Python 3.13
+# This version uses ChromaDB with all-MiniLM-L6-v2 (no PyTorch needed)
+
+# Core LangGraph and LangChain
+langgraph>=0.0.55
+langchain>=0.1.10
+langchain-core>=0.1.30
+langchain-community>=0.0.25
+langchain-groq>=0.1.0
+langchain-text-splitters>=0.0.1
+
+# LLM and API clients
+groq>=0.4.2
+
+# Vector Database with compatible embeddings
+chromadb>=0.4.22
+
+# Essential utilities
+python-dotenv>=1.0.0
+pydantic>=2.5.0
+typing-extensions>=4.8.0
+
+# Data Processing
+numpy>=1.24.0
+
+# Testing
+pytest>=7.4.0
