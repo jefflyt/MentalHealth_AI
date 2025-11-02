@@ -229,9 +229,70 @@ if __name__ == '__main__':
 
 ### Add New Knowledge
 
-1. Add `.txt` files to `data/knowledge/<category>/`
-2. Run update: `python agent/update_agent.py auto`
-3. Restart app: `python run_web.py`
+**Supported File Formats:**
+- 📄 `.txt` - Plain text (always supported)
+- 📝 `.md` - Markdown files (always supported)
+- 📋 `.pdf` - PDF documents (requires PyPDF2)
+- 📄 `.docx` - Word documents (requires python-docx)
+- 🌐 `.html/.htm` - HTML files (requires beautifulsoup4 - already installed)
+- 📊 `.csv` - CSV data (requires pandas)
+- 🔧 `.json` - JSON data (always supported)
+
+**Adding New Content:**
+
+1. **Basic Text Files** (no extra setup needed):
+   ```bash
+   # Add .txt or .md files to appropriate category
+   echo "Content here" > data/knowledge/mental_health_info/new_topic.txt
+   ```
+
+2. **PDF/DOCX Files** (requires optional libraries):
+   ```bash
+   # First, install format support
+   pip install PyPDF2 python-docx pandas openpyxl
+   
+   # Then add files to knowledge folder
+   cp clinical_guidelines.pdf data/knowledge/clinical_guidelines/
+   cp treatment_protocol.docx data/knowledge/crisis_protocols/
+   ```
+
+3. **Structured Data** (CSV/JSON):
+   ```bash
+   # Add resource lists or FAQs
+   cp singapore_resources.csv data/knowledge/singapore_resources/
+   cp faqs.json data/knowledge/faqs/
+   ```
+
+4. **Update ChromaDB:**
+   ```bash
+   python agent/update_agent.py auto
+   ```
+
+5. **Restart app:**
+   ```bash
+   python run_web.py
+   ```
+
+**Best Practices:**
+- **PDFs:** Great for clinical guidelines, research papers
+- **Word Docs:** Good for structured protocols, reports
+- **CSV:** Perfect for resource directories, contact lists
+- **JSON:** Ideal for FAQ databases, structured Q&A
+- **Markdown:** Best for formatted documentation
+- **Plain Text:** Simple, reliable, always works
+
+**Format Support Status:**
+
+When you run the UpdateAgent, you'll see:
+```
+📁 Multi-Format Support Status:
+  ✅ Plain Text (.txt, .md)
+  ✅ PDF Documents (.pdf) [if PyPDF2 installed]
+  ✅ Word Documents (.docx) [if python-docx installed]
+  ✅ HTML Files (.html, .htm)
+  ✅ CSV Data (.csv) [if pandas installed]
+  ✅ JSON Data (.json)
+```
 
 ---
 

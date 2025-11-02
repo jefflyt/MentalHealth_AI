@@ -1,0 +1,16 @@
+Service Type,Service Name,Contact Number,Address,Operating Hours,Services Offered,Language,Subsidies Available
+Public Hospital,Institute of Mental Health,6389 2222,"10 Buangkok View, Singapore 539747",24/7 Emergency,"Psychiatric emergency, inpatient care, outpatient care, community services","English, Mandarin, Malay, Tamil",Yes - Medisave/CHAS
+Public Hospital,National University Hospital,6779 5555,"5 Lower Kent Ridge Road, Singapore 119074",24/7 Emergency,"Psychiatric services, psychological services","English, Mandarin",Yes - Medisave
+Public Clinic,Polyclinic Mental Health Services,Various,Multiple locations island-wide,Mon-Fri 8am-5pm,"Mental health screening, counselling, referrals","English, Mandarin, Malay, Tamil",Yes - CHAS
+Community,CHAT (Community Health Assessment Team),6493 6500/6501,"Multiple locations island-wide",Mon-Fri 9am-6pm,"Mental health assessment for youth 16-30","English, Mandarin",Free
+Community,Community Mental Health Team,Various,Multiple locations,"Mon-Fri 9am-5pm","Community mental health support, home visits","English, Mandarin, Malay, Tamil",Subsidized
+Private,Gleneagles Hospital,6473 7222,"6A Napier Road, Singapore 258500",24/7,"Psychiatric inpatient and outpatient services","English, Mandarin",Insurance accepted
+Private,Mount Elizabeth Hospital,6731 2218,"3 Mount Elizabeth, Singapore 228510",24/7,"Psychiatric and psychological services","English, Mandarin",Insurance accepted
+Counselling,SAMH Counselling Centre,1800 283 7019,"2A Leng Kee Road, #02-01, Singapore 159086",Mon-Sat 9am-6pm,"Individual and family counselling","English, Mandarin",Subsidized
+Counselling,Fei Yue Community Services,6580 2366,Multiple locations,"Mon-Fri 9am-6pm","Counselling, case management, support groups","English, Mandarin",Subsidized
+Counselling,TOUCH Community Services,6804 6555,Multiple locations,"Mon-Fri 9am-6pm","Youth and family counselling","English, Mandarin",Subsidized
+Youth Services,REACH Community Services,6354 4788,"290 Orchard Road, #11-01, Singapore 238859",Mon-Fri 9am-6pm,"Youth counselling and support programs","English, Mandarin",Subsidized
+Youth Services,Care Corner Singapore,1800 353 5800,Multiple locations,"Mon-Fri 9am-6pm","Youth and family services","English, Mandarin",Subsidized
+Helpline,Samaritans of Singapore,1767,N/A (Hotline),24/7,"Crisis helpline and befriending","English, Mandarin",Free
+Helpline,National CARE Hotline,1800 202 6868,N/A (Hotline),24/7,"Emotional and psychological support","English, Mandarin, Malay, Tamil",Free
+Helpline,Silver Ribbon Singapore,6385 3714,N/A (Mon-Fri only),Mon-Fri 9am-6pm,"Mental health support and awareness","English, Mandarin",Free

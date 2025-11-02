@@ -2,6 +2,21 @@
 """
 Smart Update Agent for AI Mental Health ChromaDB
 Monitors data/knowledge/ folder and performs intelligent updates when changes are detected
+
+Supports multiple file formats: .txt, .md, .pdf, .docx, .html, .json, .csv
+
+Recommended folder structure:
+  data/knowledge/
+  ├── text/                    # Plain text files (.txt)
+  ├── markdown/                # Markdown files (.md)
+  ├── pdfs/                    # PDF documents (.pdf)
+  │   └── research_papers/     # Organized by subcategory
+  ├── documents/               # Word documents (.docx)
+  ├── web_sources/             # HTML/scraped content (.html)
+  ├── structured_data/         # CSV/JSON files (.csv, .json)
+  └── reference/               # Mixed format references
+  
+Also supports legacy category-based structure (coping_strategies/, crisis_protocols/, etc.)
 """
 
 import os
@@ -13,6 +28,31 @@ import json
 from datetime import datetime
 from pathlib import Path
 
+# Multi-format support imports (with graceful fallbacks)
+try:
+    import PyPDF2
+    PDF_SUPPORT = True
+except ImportError:
+    PDF_SUPPORT = False
+
+try:
+    from docx import Document as DocxDocument
+    DOCX_SUPPORT = True
+except ImportError:
+    DOCX_SUPPORT = False
+
+try:
+    import pandas as pd
+    CSV_SUPPORT = True
+except ImportError:
+    CSV_SUPPORT = False
+
+try:
+    from bs4 import BeautifulSoup
+    HTML_SUPPORT = True
+except ImportError:
+    HTML_SUPPORT = False
+
 # Initialize ChromaDB
 chroma_client = chromadb.PersistentClient(path="./data/chroma_db")
 embedding_function = embedding_functions.DefaultEmbeddingFunction()
@@ -21,12 +61,165 @@ embedding_function = embedding_functions.DefaultEmbeddingFunction()
 STATE_FILE = "data/chroma_db/.update_state.json"
 
 class UpdateAgent:
-    """Smart agent for monitoring and updating ChromaDB with new data."""
+    """Smart agent for monitoring and updating ChromaDB with new data.
+    
+    Supports multiple file formats:
+    - .txt (plain text)
+    - .md (markdown)
+    - .pdf (PDF documents - requires PyPDF2)
+    - .docx (Word documents - requires python-docx)
+    - .html/.htm (HTML files - requires beautifulsoup4)
+    - .json (JSON data)
+    - .csv (CSV data - requires pandas)
+    """
+    
+    # Supported file formats
+    SUPPORTED_FORMATS = {
+        '.txt': 'Plain Text',
+        '.md': 'Markdown',
+        '.pdf': 'PDF Document',
+        '.docx': 'Word Document',
+        '.html': 'HTML',
+        '.htm': 'HTML',
+        '.json': 'JSON Data',
+        '.csv': 'CSV Data',
+    }
     
     def __init__(self, knowledge_dir: str = "data/knowledge", collection_name: str = "mental_health_kb"):
         self.knowledge_dir = knowledge_dir
         self.collection_name = collection_name
         self.state = self.load_state()
+        self._print_format_support()
+    
+    def _print_format_support(self):
+        """Print supported formats and missing dependencies."""
+        print("\n📁 Multi-Format Support Status:")
+        print(f"  ✅ Plain Text (.txt, .md)")
+        print(f"  {'✅' if PDF_SUPPORT else '❌'} PDF Documents (.pdf) {'' if PDF_SUPPORT else '- Install PyPDF2'}")
+        print(f"  {'✅' if DOCX_SUPPORT else '❌'} Word Documents (.docx) {'' if DOCX_SUPPORT else '- Install python-docx'}")
+        print(f"  {'✅' if HTML_SUPPORT else '❌'} HTML Files (.html, .htm) {'' if HTML_SUPPORT else '- Install beautifulsoup4'}")
+        print(f"  {'✅' if CSV_SUPPORT else '❌'} CSV Data (.csv) {'' if CSV_SUPPORT else '- Install pandas'}")
+        print(f"  ✅ JSON Data (.json)\n")
+        
+    def extract_text_from_file(self, filepath: str) -> str:
+        """Extract text from various file formats.
+        
+        Args:
+            filepath: Path to file
+            
+        Returns:
+            Extracted text content
+        """
+        ext = Path(filepath).suffix.lower()
+        
+        if ext in ['.txt', '.md']:
+            return self._read_text_file(filepath)
+        elif ext == '.pdf':
+            return self._read_pdf(filepath)
+        elif ext == '.docx':
+            return self._read_docx(filepath)
+        elif ext in ['.html', '.htm']:
+            return self._read_html(filepath)
+        elif ext == '.json':
+            return self._read_json(filepath)
+        elif ext == '.csv':
+            return self._read_csv(filepath)
+        else:
+            print(f"⚠️  Unsupported format: {ext} for {filepath}")
+            return ""
+    
+    def _read_text_file(self, filepath: str) -> str:
+        """Read plain text or markdown files."""
+        try:
+            with open(filepath, 'r', encoding='utf-8') as f:
+                return f.read()
+        except Exception as e:
+            print(f"❌ Error reading text file {filepath}: {e}")
+            return ""
+    
+    def _read_pdf(self, filepath: str) -> str:
+        """Read PDF files using PyPDF2."""
+        if not PDF_SUPPORT:
+            print(f"⚠️  PDF support not available. Install: pip install PyPDF2")
+            return ""
+        
+        try:
+            text = []
+            with open(filepath, 'rb') as f:
+                reader = PyPDF2.PdfReader(f)
+                for page in reader.pages:
+                    text.append(page.extract_text())
+            return "\n\n".join(text)
+        except Exception as e:
+            print(f"❌ Error reading PDF {filepath}: {e}")
+            return ""
+    
+    def _read_docx(self, filepath: str) -> str:
+        """Read Word documents using python-docx."""
+        if not DOCX_SUPPORT:
+            print(f"⚠️  DOCX support not available. Install: pip install python-docx")
+            return ""
+        
+        try:
+            doc = DocxDocument(filepath)
+            return "\n\n".join([paragraph.text for paragraph in doc.paragraphs if paragraph.text.strip()])
+        except Exception as e:
+            print(f"❌ Error reading DOCX {filepath}: {e}")
+            return ""
+    
+    def _read_html(self, filepath: str) -> str:
+        """Read HTML files using BeautifulSoup."""
+        if not HTML_SUPPORT:
+            print(f"⚠️  HTML support not available. Install: pip install beautifulsoup4")
+            return ""
+        
+        try:
+            with open(filepath, 'r', encoding='utf-8') as f:
+                soup = BeautifulSoup(f.read(), 'html.parser')
+                # Remove script and style elements
+                for script in soup(["script", "style"]):
+                    script.decompose()
+                return soup.get_text(separator='\n\n', strip=True)
+        except Exception as e:
+            print(f"❌ Error reading HTML {filepath}: {e}")
+            return ""
+    
+    def _read_json(self, filepath: str) -> str:
+        """Read JSON files and convert to text."""
+        try:
+            with open(filepath, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+            
+            # Convert JSON to readable text format
+            if isinstance(data, dict):
+                lines = []
+                for key, value in data.items():
+                    if isinstance(value, (list, dict)):
+                        lines.append(f"{key}:\n{json.dumps(value, indent=2)}")
+                    else:
+                        lines.append(f"{key}: {value}")
+                return "\n\n".join(lines)
+            elif isinstance(data, list):
+                return "\n\n".join([json.dumps(item, indent=2) for item in data])
+            else:
+                return str(data)
+        except Exception as e:
+            print(f"❌ Error reading JSON {filepath}: {e}")
+            return ""
+    
+    def _read_csv(self, filepath: str) -> str:
+        """Read CSV files using pandas."""
+        if not CSV_SUPPORT:
+            print(f"⚠️  CSV support not available. Install: pip install pandas")
+            return ""
+        
+        try:
+            df = pd.read_csv(filepath)
+            # Convert to readable text format
+            return df.to_string(index=False)
+        except Exception as e:
+            print(f"❌ Error reading CSV {filepath}: {e}")
+            return ""
         
     def load_state(self) -> Dict:
         """Load previous state to track changes."""
@@ -72,6 +265,7 @@ class UpdateAgent:
     def scan_data_folder(self) -> Dict[str, Dict]:
         """
         Scan knowledge folder and return file information.
+        Supports multiple file formats: .txt, .md, .pdf, .docx, .html, .json, .csv
         
         Returns:
             Dict mapping file paths to their metadata (hash, category, etc.)
@@ -82,21 +276,27 @@ class UpdateAgent:
             print(f"⚠️  Knowledge directory not found: {self.knowledge_dir}")
             return files_info
         
+        # Get list of supported extensions
+        supported_extensions = tuple(self.SUPPORTED_FORMATS.keys())
+        
         for root, dirs, files in os.walk(self.knowledge_dir):
             for file in files:
-                if file.endswith('.txt'):
+                # Check if file has supported extension
+                if any(file.lower().endswith(ext) for ext in supported_extensions):
                     file_path = os.path.join(root, file)
                     rel_path = os.path.relpath(file_path, self.knowledge_dir)
                     
                     try:
                         file_hash = self.get_file_hash(file_path)
                         category = os.path.basename(root)
+                        file_ext = Path(file).suffix.lower()
                         
                         files_info[rel_path] = {
                             'full_path': file_path,
                             'hash': file_hash,
                             'category': category,
-                            'filename': file
+                            'filename': file,
+                            'format': self.SUPPORTED_FORMATS.get(file_ext, 'Unknown')
                         }
                     except Exception as e:
                         print(f"   ✗ Error reading {file_path}: {e}")
@@ -206,11 +406,15 @@ class UpdateAgent:
             filename = file_info['filename']
             category = file_info['category']
             file_hash = file_info['hash']
+            file_format = file_info['format']
             
             try:
-                # Read file content
-                with open(file_path, 'r', encoding='utf-8') as f:
-                    content = f.read()
+                # Read file content using format-specific reader
+                content = self.extract_text_from_file(file_path)
+                
+                if not content:
+                    print(f"   ⚠️  Skipping {rel_path} - no content extracted")
+                    continue
                 
                 # If modified, delete old chunks first
                 if rel_path in modified_files:
@@ -232,12 +436,13 @@ class UpdateAgent:
                         'chunk_id': chunk_id,
                         'category': category,
                         'file_hash': file_hash,
-                        'file_path': rel_path
+                        'file_path': rel_path,
+                        'format': file_format
                     })
                     updated_count += 1
                 
                 status = "📄 NEW" if rel_path in new_files else "✏️  MOD"
-                print(f"   {status} {filename} ({len(chunks)} chunks)")
+                print(f"   {status} {filename} [{file_format}] ({len(chunks)} chunks)")
                 
             except Exception as e:
                 print(f"   ✗ Error processing {file_path}: {e}")
@@ -253,7 +458,8 @@ class UpdateAgent:
                     'category': doc['category'],
                     'chunk_id': doc['chunk_id'],
                     'file_hash': doc['file_hash'],
-                    'file_path': doc['file_path']
+                    'file_path': doc['file_path'],
+                    'format': doc['format']
                 } for doc in new_documents],
                 ids=[doc['chunk_id'] for doc in new_documents]
             )

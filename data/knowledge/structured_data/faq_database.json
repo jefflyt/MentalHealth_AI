@@ -1,0 +1,73 @@
+{
+  "anxiety_faqs": [
+    {
+      "question": "What is anxiety?",
+      "answer": "Anxiety is a natural stress response characterized by feelings of worry, nervousness, or unease. While normal anxiety is temporary and proportional to the stressor, anxiety disorders involve excessive, persistent worry that interferes with daily life.",
+      "category": "General Understanding"
+    },
+    {
+      "question": "When should I seek professional help for anxiety?",
+      "answer": "Seek professional help if: (1) Anxiety persists for more than 6 months, (2) It interferes with work, school, or relationships, (3) You avoid activities due to anxiety, (4) You experience panic attacks, or (5) You use alcohol/drugs to cope.",
+      "category": "When to Seek Help"
+    },
+    {
+      "question": "What are common symptoms of anxiety disorders?",
+      "answer": "Physical symptoms: rapid heartbeat, sweating, trembling, fatigue, muscle tension, sleep problems. Psychological symptoms: excessive worry, restlessness, difficulty concentrating, irritability, sense of impending danger.",
+      "category": "Symptoms"
+    },
+    {
+      "question": "Are anxiety disorders common in Singapore?",
+      "answer": "Yes, anxiety disorders are among the most common mental health conditions in Singapore. Studies suggest that about 1 in 14 people in Singapore will experience an anxiety disorder in their lifetime.",
+      "category": "Singapore Context"
+    },
+    {
+      "question": "What treatments are available for anxiety?",
+      "answer": "Effective treatments include: (1) Cognitive Behavioral Therapy (CBT), (2) Medications (SSRIs, SNRIs, benzodiazepines), (3) Mindfulness and relaxation techniques, (4) Lifestyle changes (exercise, sleep hygiene), (5) Support groups.",
+      "category": "Treatment"
+    }
+  ],
+  "depression_faqs": [
+    {
+      "question": "What is depression?",
+      "answer": "Depression (Major Depressive Disorder) is a mood disorder causing persistent feelings of sadness, loss of interest, and other symptoms that interfere with daily functioning for at least 2 weeks.",
+      "category": "General Understanding"
+    },
+    {
+      "question": "How is depression different from normal sadness?",
+      "answer": "Normal sadness is temporary and related to specific events. Depression involves: (1) Persistent low mood lasting weeks/months, (2) Loss of interest in previously enjoyed activities, (3) Physical symptoms (sleep, appetite changes), (4) Impaired functioning, (5) Thoughts of worthlessness or death.",
+      "category": "Diagnosis"
+    },
+    {
+      "question": "Can depression be treated?",
+      "answer": "Yes, depression is highly treatable. About 80-90% of people with depression respond well to treatment, which typically includes psychotherapy, medication, or both. Recovery is possible with proper support and treatment.",
+      "category": "Treatment"
+    },
+    {
+      "question": "Where can I get help for depression in Singapore?",
+      "answer": "Options include: (1) Polyclinics for subsidized care, (2) Institute of Mental Health (IMH), (3) Private psychiatrists/psychologists, (4) Community mental health centers, (5) Helplines: IMH 6389 2222, SOS 1767, National CARE Hotline 1800 202 6868.",
+      "category": "Singapore Resources"
+    },
+    {
+      "question": "What should I do if someone I know is depressed?",
+      "answer": "You can help by: (1) Listening without judgment, (2) Encouraging them to seek professional help, (3) Offering to accompany them to appointments, (4) Staying in regular contact, (5) Being patient and supportive, (6) Taking any talk of self-harm seriously and seeking immediate help.",
+      "category": "Supporting Others"
+    }
+  ],
+  "general_faqs": [
+    {
+      "question": "Is mental illness common?",
+      "answer": "Yes, mental illness is very common. According to the Singapore Mental Health Study, 1 in 7 people in Singapore has experienced a mental disorder in their lifetime. You are not alone.",
+      "category": "Awareness"
+    },
+    {
+      "question": "Will my information be kept confidential?",
+      "answer": "Yes, healthcare professionals are bound by confidentiality. Your information will only be shared: (1) With your consent, (2) If there's risk of harm to yourself or others, (3) As required by law. Privacy is taken very seriously in Singapore's healthcare system.",
+      "category": "Privacy"
+    },
+    {
+      "question": "How much does mental health treatment cost in Singapore?",
+      "answer": "Costs vary: Public polyclinics ($10-30 per visit with subsidies), IMH (subsidized rates available), Private psychiatrists ($150-300+ per session). Medisave can be used for some treatments. CHAS cardholders get additional subsidies. Financial assistance is available for those in need.",
+      "category": "Cost"
+    }
+  ]
+}

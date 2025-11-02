@@ -524,7 +524,7 @@ Benefits:
 
 ### 3.7 Web Scraping for Knowledge Updates
 
-**File:** `web_scraper.py` (231 lines)
+**File:** `scripts/web_scraper.py` (231 lines)
 
 **Purpose:** Fetch mental health content from trusted websites
 
@@ -545,10 +545,10 @@ Benefits:
 
 ```bash
 # Scrape all sources
-python web_scraper.py
+python scripts/web_scraper.py
 
 # Scrape specific sources programmatically
-python -c "from web_scraper import MentalHealthWebScraper; \
+python -c "from scripts.web_scraper import MentalHealthWebScraper; \
            MentalHealthWebScraper().scrape_all(['who', 'imh'])"
 ```
 
@@ -567,7 +567,7 @@ data/knowledge/web_sources/
 
 **Adding New Sources:**
 
-Edit `web_scraper.py`:
+Edit `scripts/web_scraper.py`:
 ```python
 TRUSTED_SOURCES = {
     'new_source': {
@@ -579,9 +579,9 @@ TRUSTED_SOURCES = {
 }
 ```
 
-### 3.8 Periodic Updates
+### 3.8 Automated Periodic Updates
 
-**File:** `periodic_updater.py` (184 lines)
+**File:** `scripts/periodic_updater.py` (102 lines)
 
 **Purpose:** Automated knowledge base updates on schedule
 
@@ -596,13 +596,13 @@ TRUSTED_SOURCES = {
 
 ```bash
 # Manual one-time update
-python periodic_updater.py
-python periodic_updater.py manual
+python scripts/periodic_updater.py
+python scripts/periodic_updater.py manual
 
 # Scheduled updates (keeps running)
-python periodic_updater.py schedule --frequency weekly
-python periodic_updater.py schedule --frequency daily
-python periodic_updater.py schedule --frequency monthly
+python scripts/periodic_updater.py schedule --frequency weekly
+python scripts/periodic_updater.py schedule --frequency daily
+python scripts/periodic_updater.py schedule --frequency monthly
 ```
 
 **Schedule Options:**
@@ -613,10 +613,10 @@ python periodic_updater.py schedule --frequency monthly
 **Running in Background (macOS/Linux):**
 ```bash
 # Using nohup
-nohup python periodic_updater.py schedule --frequency weekly > update.log 2>&1 &
+nohup python scripts/periodic_updater.py schedule --frequency weekly > update.log 2>&1 &
 
 # Using screen
-screen -dmS knowledge-updater python periodic_updater.py schedule
+screen -dmS knowledge-updater python scripts/periodic_updater.py schedule
 ```
 
 **macOS LaunchAgent Setup:**
@@ -633,7 +633,7 @@ Create `~/Library/LaunchAgents/com.mentalhealth.updater.plist`:
     <key>ProgramArguments</key>
     <array>
         <string>/path/to/venv/bin/python</string>
-        <string>/path/to/periodic_updater.py</string>
+        <string>/path/to/scripts/periodic_updater.py</string>
         <string>manual</string>
     </array>
     <key>StartCalendarInterval</key>
@@ -658,7 +658,7 @@ Load: `launchctl load ~/Library/LaunchAgents/com.mentalhealth.updater.plist`
 **Manual Update:**
 ```bash
 # Step 1: Scrape web sources
-python web_scraper.py
+python scripts/web_scraper.py
 
 # Step 2: Update ChromaDB
 python -c "from agent import UpdateAgent; UpdateAgent().perform_smart_update()"
@@ -670,10 +670,10 @@ python agent/update_agent.py status
 **Automated Update:**
 ```bash
 # One-time (scraping + updating)
-python periodic_updater.py manual
+python scripts/periodic_updater.py manual
 
 # Scheduled weekly updates
-python periodic_updater.py schedule --frequency weekly
+python scripts/periodic_updater.py schedule --frequency weekly
 ```
 
 ---
@@ -807,7 +807,37 @@ sudo systemctl status mh-agent
 
 ## 5. Customization
 
-### 5.1 Adding New Agent
+### 5.1 Utility Scripts
+
+**Location:** `scripts/`
+
+The `scripts/` folder contains utility scripts for testing and maintenance:
+
+1. **web_scraper.py** (231 lines)
+   - **Purpose:** Production web scraping tool
+   - **Usage:** `python scripts/web_scraper.py`
+   - **Function:** Fetches content from trusted mental health websites (WHO, IMH, HealthHub, SAMH)
+
+2. **periodic_updater.py** (102 lines)
+   - **Purpose:** Production automated update scheduler
+   - **Usage:** `python scripts/periodic_updater.py schedule --frequency weekly`
+   - **Function:** Runs web scraper and knowledge base updates on schedule
+
+3. **test_multiformat.py** (13 lines)
+   - **Purpose:** Development utility for testing multi-format support
+   - **Usage:** `python scripts/test_multiformat.py`
+   - **Function:** Quick demo showing supported file formats
+
+4. **verify_code.py** (273 lines)
+   - **Purpose:** Development utility for code verification
+   - **Usage:** `python scripts/verify_code.py`
+   - **Function:** Validates UpdateAgent structure without installing optional dependencies
+
+**Production vs Development:**
+- **Production:** `web_scraper.py`, `periodic_updater.py` (essential for knowledge updates)
+- **Development:** `test_multiformat.py`, `verify_code.py` (testing and verification only)
+
+### 5.2 Adding New Agent
 
 **Step 1:** Create agent file
 ```python
@@ -881,7 +911,7 @@ workflow.add_conditional_edges(
 workflow.add_edge("new_agent", END)
 ```
 
-### 5.2 Modifying Prompts
+### 5.3 Modifying Prompts
 
 Edit agent files directly. Example for Information Agent:
 

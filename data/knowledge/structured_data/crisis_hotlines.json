@@ -1,0 +1,83 @@
+{
+  "singapore_crisis_hotlines": [
+    {
+      "name": "Samaritans of Singapore (SOS)",
+      "hotline": "1767",
+      "operating_hours": "24/7",
+      "services": "Emotional support for people in crisis, thinking of suicide or affected by suicide",
+      "language": "English, Mandarin",
+      "email": "pat@sos.org.sg",
+      "website": "https://www.sos.org.sg"
+    },
+    {
+      "name": "Institute of Mental Health (IMH) Mental Health Helpline",
+      "hotline": "6389 2222",
+      "operating_hours": "24/7",
+      "services": "Mental health crisis support and information",
+      "language": "English, Mandarin, Malay, Tamil",
+      "website": "https://www.imh.com.sg"
+    },
+    {
+      "name": "National CARE Hotline",
+      "hotline": "1800 202 6868",
+      "operating_hours": "24/7",
+      "services": "General emotional and psychological support",
+      "language": "English, Mandarin, Malay, Tamil",
+      "website": "https://www.ncss.gov.sg"
+    },
+    {
+      "name": "CHAT (Community Health Assessment Team)",
+      "hotline": "6493 6500/6501",
+      "operating_hours": "Monday to Friday: 9am to 6pm (except public holidays)",
+      "services": "Mental health check and support for youth aged 16-30",
+      "language": "English, Mandarin",
+      "website": "https://www.chat.mentalhealth.sg",
+      "walk_in": "Possible at designated locations"
+    },
+    {
+      "name": "Fei Yue's Online Counselling Service",
+      "hotline": "N/A",
+      "operating_hours": "Monday to Friday: 10am to 12pm, 2pm to 5pm",
+      "services": "Online counselling via chat",
+      "language": "English, Mandarin",
+      "website": "https://www.eC2.sg"
+    },
+    {
+      "name": "Silver Ribbon Singapore",
+      "hotline": "6385 3714",
+      "operating_hours": "Monday to Friday: 9am to 6pm",
+      "services": "Mental health support and awareness",
+      "language": "English, Mandarin",
+      "email": "info@silverribbonsingapore.org"
+    },
+    {
+      "name": "TOUCHline (Counselling)",
+      "hotline": "1800 377 2252",
+      "operating_hours": "Monday to Friday: 9am to 6pm",
+      "services": "General counselling services",
+      "language": "English, Mandarin",
+      "website": "https://www.touch.org.sg"
+    }
+  ],
+  "youth_specific": [
+    {
+      "name": "CHAT",
+      "target": "Youth aged 16-30",
+      "focus": "Early intervention for mental health issues"
+    },
+    {
+      "name": "eC2.sg",
+      "target": "Youth and young adults",
+      "focus": "Online counselling and support"
+    }
+  ],
+  "elderly_specific": [
+    {
+      "name": "Fei Yue Senior Helpline",
+      "hotline": "6801 1800",
+      "operating_hours": "Monday to Friday: 9am to 6pm",
+      "services": "Befriending and counselling for seniors",
+      "language": "English, Mandarin, dialects"
+    }
+  ]
+}

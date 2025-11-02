@@ -32,5 +32,22 @@ requests>=2.31.0
 lxml>=4.9.0
 schedule>=1.2.0
 
+# Multi-Format File Support (Optional - for enhanced knowledge base)
+# Install with: pip install -r requirements.txt
+# Or selectively: pip install PyPDF2 python-docx pandas openpyxl markdown
+
+# PDF Support
+PyPDF2>=3.0.0
+
+# Word Document Support
+python-docx>=1.0.0
+
+# CSV/Excel Support
+pandas>=2.0.0
+openpyxl>=3.0.0
+
+# Markdown Support (enhanced parsing)
+markdown>=3.4.0
+
 # Testing
 pytest>=7.4.0
