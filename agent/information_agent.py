@@ -4,6 +4,7 @@ Information Agent - Mental health education with evidence-based knowledge
 
 from typing import TypedDict, List
 from langchain_groq import ChatGroq
+from .sunny_persona import get_sunny_persona, get_distress_responses, build_sunny_prompt
 
 
 class AgentState(TypedDict):
@@ -16,13 +17,17 @@ class AgentState(TypedDict):
 
 
 def information_agent_node(state: AgentState, llm: ChatGroq, get_relevant_context) -> AgentState:
-    """RAG-enhanced information agent with knowledge base."""
+    """RAG-enhanced information agent with Sunny's personality."""
     query = state["current_query"]
     conversation_history = state.get("messages", [])
     distress_level = state.get("distress_level", "none")
     
+    # Load Sunny's persona components
+    sunny = get_sunny_persona()
+    distress_responses = get_distress_responses()
+    
     print("\n" + "="*60)
-    print("📚 [INFORMATION AGENT ACTIVATED]")
+    print("📚 [SUNNY - INFORMATION AGENT ACTIVATED]")
     print("="*60)
     
     # Use distress level from router (more accurate than re-detecting)
@@ -75,16 +80,16 @@ def information_agent_node(state: AgentState, llm: ChatGroq, get_relevant_contex
         print(f"💡 Providing info about: {selected_service['topic']}")
         info_context = get_relevant_context(selected_service['topic'], n_results=1)
         
-        prompt = f"""User wants: {selected_service['name']}
+        prompt = build_sunny_prompt(
+            agent_type='information',
+            context=f"User wants: {selected_service['name']}\n\nKnowledge context: {info_context}",
+            specific_instructions=f"""Provide ONE clear, actionable tip (1-2 sentences max). Use your validation phrases like: {', '.join(sunny['validation_phrases'][:3])}
 
-{info_context}
+Example response style:
+"Try taking three slow, deep breaths - it really can help calm your mind when things feel overwhelming. You've got this! 😊"
 
-Provide ONE clear, actionable tip (1-2 sentences max). Be warm and direct.
-
-Format:
-[Single helpful tip]
-
-Keep it SHORT."""
+Your warm, helpful tip:"""
+        )
         
         try:
             response = llm.invoke(prompt).content.strip()
@@ -107,47 +112,49 @@ Keep it SHORT."""
         
     elif sounds_unstable:
         # User is distressed - show response based on distress level
-        print(f"📋 Showing support response for {distress_level} distress")
+        print(f"📋 Showing Sunny's {distress_level} distress response")
+        
+        distress_response = distress_responses[distress_level]
         
         if distress_level == 'high':
             # High distress - immediate empathy + menu
-            response = """I hear you, and I'm really glad you reached out. 💙
+            response = f"""{distress_response['opening']}
 
-It sounds like you're going through a really tough time right now. I'm here to help.
+{distress_response['context']}
 
 I can support you with:
 
 1️⃣ Understanding what you're feeling
-2️⃣ Coping strategies that can help right now
+2️⃣ Coping strategies that can help right now  
 3️⃣ Connecting you to professional support in Singapore
-4️⃣ Just being here to listen
+4️⃣ Just being here to listen - whatever you need
 
-Type a number (1-4), or tell me more about what's happening."""
+Type a number (1-4), or just tell me more about what's happening. I'm not going anywhere. 😊"""
 
         elif distress_level == 'moderate':
             # Moderate distress - warm acknowledgment + menu
-            response = """I'm here for you. 💙
+            response = f"""{distress_response['opening']}
 
 I can help with:
 
 1️⃣ Understanding your feelings
-2️⃣ Coping strategies and techniques
+2️⃣ Coping strategies and techniques  
 3️⃣ Finding support services in Singapore
-4️⃣ Just someone to talk to
+4️⃣ Just someone to talk to - I'm a good listener!
 
-Type a number (1-4), or tell me what's on your mind."""
+Type a number (1-4), or just tell me what's on your mind. 😊"""
 
         else:  # mild distress
             # Mild distress - brief, welcoming, open-ended
-            response = """Hi there! I'm here to support you. 💙
+            response = f"""{distress_response['opening']}
 
 What would you like help with?
 • Understanding emotions
-• Coping strategies
+• Coping strategies  
 • Support services in Singapore
-• Or just talk - I'm listening
+• Or just talk - I'm a good listener!
 
-What's on your mind?"""
+What's on your mind today?"""
         
         state["messages"].append(response)
         state["current_agent"] = "complete"
@@ -155,21 +162,16 @@ What's on your mind?"""
         
     else:
         # Normal conversation - be friendly and supportive (VERY brief)
-        print("💬 Casual conversation mode")
-        prompt = f"""User said: "{query}"
+        print("💬 Sunny's casual conversation mode")
+        prompt = build_sunny_prompt(
+            agent_type='information',
+            context=f'User said: "{query}"',
+            specific_instructions=f"""If this is about mental health, wellbeing, or emotions: Respond as Sunny with warmth and support in 1-2 SHORT sentences using phrases like: {', '.join(sunny['validation_phrases'][:2])}
 
-Respond like a caring, supportive friend in 1-2 SHORT sentences. Be genuinely warm.
+If this is NOT about mental health: Use Sunny's redirect: "{sunny['redirect_template']}"
 
-Good examples:
-"I hear you. What's been going on?"
-"That sounds really tough. I'm here to listen."
-"I'm glad you're reaching out. How can I help?"
-
-Bad examples:
-"If you're in Singapore and need immediate support..." (too formal)
-"Call the Samaritans..." (jumps straight to resources)
-
-Your warm, brief response:"""
+Your warm response as Sunny:"""
+        )
     
         try:
             response = llm.invoke(prompt).content.strip()
@@ -180,7 +182,7 @@ Your warm, brief response:"""
             
         except Exception as e:
             print(f"Information agent error: {e}")
-            response = "I'm here to listen. What's on your mind? 💙"
+            response = f"{sunny['validation_phrases'][0]}. What's on your mind? 💙"
         
         state["messages"].append(response)
         state["current_agent"] = "complete"

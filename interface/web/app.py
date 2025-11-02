@@ -185,14 +185,180 @@ def get_history():
     
     return jsonify({'history': conversations[session_id]})
 
-@app.route('/health', methods=['GET'])
-def health_check():
-    """Health check endpoint."""
-    return jsonify({
-        'status': 'healthy',
-        'agent_system': 'operational',
-        'timestamp': datetime.now().isoformat()
-    })
+@app.route('/assessment/<assessment_type>', methods=['POST'])
+def start_assessment(assessment_type):
+    """Handle self-assessment requests."""
+    try:
+        # Here you would integrate with your assessment agent
+        # For now, return a placeholder response
+        
+        assessment_responses = {
+            'dass21': {
+                'title': 'DASS-21 Assessment Started',
+                'message': 'I\'m here to guide you through a gentle mental health screening. Remember, this is just a helpful tool - not a diagnosis.',
+                'questions': [
+                    'Over the past week, how often have you felt down, depressed, or hopeless?',
+                    'How often have you had trouble relaxing?',
+                    'How often have you felt that you were pretty worthless?'
+                ]
+            },
+            'mood': {
+                'title': 'Quick Mood Check',
+                'message': 'Let\'s take a moment to check in with how you\'re feeling right now.',
+                'questions': [
+                    'On a scale of 1-10, how would you rate your current mood?',
+                    'How would you describe your energy level today?',
+                    'What\'s one word that captures how you\'re feeling?'
+                ]
+            },
+            'stress': {
+                'title': 'Stress Level Check',
+                'message': 'Stress is normal, but let\'s see how we can help you manage it.',
+                'questions': [
+                    'How overwhelmed do you feel by your current responsibilities?',
+                    'How well are you sleeping lately?',
+                    'What coping strategies have you tried recently?'
+                ]
+            }
+        }
+        
+        if assessment_type in assessment_responses:
+            response = assessment_responses[assessment_type]
+            return jsonify({
+                'success': True,
+                'assessment': response,
+                'timestamp': datetime.now().isoformat()
+            })
+        else:
+            return jsonify({
+                'error': 'Assessment type not found',
+                'available_types': list(assessment_responses.keys())
+            }), 404
+            
+    except Exception as e:
+        print(f"Error in assessment: {e}")
+        return jsonify({
+            'error': 'An error occurred starting the assessment'
+        }), 500
+
+@app.route('/tool/<tool_name>', methods=['GET'])
+def get_tool(tool_name):
+    """Provide tool content and exercises."""
+    try:
+        tools_content = {
+            'breathing': {
+                'title': '🫁 Breathing Exercises',
+                'exercises': [
+                    {
+                        'name': '4-7-8 Breathing',
+                        'description': 'Inhale for 4 counts, hold for 7, exhale for 8',
+                        'benefits': 'Reduces anxiety and helps you sleep'
+                    },
+                    {
+                        'name': 'Box Breathing',
+                        'description': 'Inhale 4, hold 4, exhale 4, hold 4',
+                        'benefits': 'Calms the nervous system'
+                    }
+                ]
+            },
+            'gratitude': {
+                'title': '🙏 Gratitude Practice',
+                'prompts': [
+                    'What are 3 things you\'re grateful for today?',
+                    'Who in your life are you thankful for?',
+                    'What small wins did you have today?'
+                ]
+            },
+            'affirmations': {
+                'title': '💪 Positive Affirmations',
+                'affirmations': [
+                    'I am worthy of love and care',
+                    'I am doing my best each day',
+                    'My feelings are valid and important',
+                    'I am stronger than I realize'
+                ]
+            }
+        }
+        
+        if tool_name in tools_content:
+            return jsonify({
+                'success': True,
+                'tool': tools_content[tool_name],
+                'timestamp': datetime.now().isoformat()
+            })
+        else:
+            return jsonify({
+                'error': 'Tool not found',
+                'available_tools': list(tools_content.keys())
+            }), 404
+            
+    except Exception as e:
+        print(f"Error getting tool: {e}")
+        return jsonify({
+            'error': 'An error occurred loading the tool'
+        }), 500
+
+@app.route('/resources', methods=['GET'])
+def get_resources():
+    """Get organized mental health resources."""
+    try:
+        resources = {
+            'emergency': [
+                {
+                    'name': 'SOS Helpline',
+                    'description': '24/7 emotional support',
+                    'contact': '1767',
+                    'type': 'phone'
+                },
+                {
+                    'name': 'IMH Emergency',
+                    'description': 'Psychiatric emergency services',
+                    'contact': '6389-2222',
+                    'type': 'phone'
+                }
+            ],
+            'counseling': [
+                {
+                    'name': 'CHAT (Youth 16-30)',
+                    'description': 'Free mental health assessment and counseling',
+                    'contact': '6493-6500',
+                    'website': 'https://www.chat.mentalhealth.sg/',
+                    'type': 'phone'
+                },
+                {
+                    'name': 'SAMH Counseling',
+                    'description': 'Professional counseling services',
+                    'website': 'https://www.samhealth.org.sg/',
+                    'type': 'website'
+                }
+            ],
+            'educational': [
+                {
+                    'name': 'HealthHub Mental Wellness',
+                    'description': 'Government health information portal',
+                    'website': 'https://www.healthhub.sg/live-healthy/mental_well-being',
+                    'type': 'website'
+                },
+                {
+                    'name': 'WHO Mental Health',
+                    'description': 'Global mental health information',
+                    'website': 'https://www.who.int/health-topics/mental-health',
+                    'type': 'website'
+                }
+            ]
+        }
+        
+        return jsonify({
+            'success': True,
+            'resources': resources,
+            'timestamp': datetime.now().isoformat()
+        })
+        
+    except Exception as e:
+        print(f"Error getting resources: {e}")
+        return jsonify({
+            'error': 'An error occurred loading resources'
+        }), 500
 
 if __name__ == '__main__':
     # Run the Flask app

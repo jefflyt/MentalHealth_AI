@@ -1,9 +1,10 @@
 """
-Crisis Intervention Agent - Immediate support with emergency protocols
+Crisis Agent - Immediate intervention for crisis situations
 """
 
 from typing import TypedDict, List
 from langchain_groq import ChatGroq
+from .sunny_persona import get_sunny_persona, build_sunny_prompt, get_boundary_statements
 
 
 class AgentState(TypedDict):
@@ -15,10 +16,14 @@ class AgentState(TypedDict):
 
 
 def crisis_intervention_node(state: AgentState, llm: ChatGroq, get_relevant_context) -> AgentState:
-    """RAG-enhanced crisis intervention with relevant protocols."""
+    """Crisis intervention with Sunny's caring presence and immediate support protocols."""
+    
+    # Load Sunny's persona components
+    sunny = get_sunny_persona()
+    boundaries = get_boundary_statements()
     
     print("\n" + "="*60)
-    print("🚨 [AGENT ACTIVATED: Crisis Intervention Agent]")
+    print("🚨 [SUNNY - CRISIS INTERVENTION ACTIVATED]")
     print("="*60)
     
     query = state["current_query"]
@@ -26,33 +31,35 @@ def crisis_intervention_node(state: AgentState, llm: ChatGroq, get_relevant_cont
     # Get crisis intervention context
     crisis_context = get_relevant_context(f"crisis intervention emergency protocols {query}", n_results=3)
     
-    crisis_prompt = f"""
-    CRISIS INTERVENTION MODE - Provide immediate support based on this context:
-    
-    Context: {crisis_context}
-    
-    User Query: "{query}"
-    
-    Provide:
-    1. Immediate reassurance and validation
-    2. Safety planning and coping strategies
-    3. Emergency contacts specific to Singapore
-    4. Encouragement to seek immediate professional help
-    
-    Be empathetic, direct, and actionable.
-    """
+    crisis_prompt = build_sunny_prompt(
+        agent_type='crisis',
+        context=f"Crisis situation detected. Context: {crisis_context}\nUser Query: \"{query}\"",
+        specific_instructions=f"""As Sunny, I'm here with you right now in this crisis. Respond with urgent care while maintaining your warm presence.
+
+IMMEDIATELY provide:
+1. Sunny's caring validation: "{boundaries['crisis']['urgency']}"
+2. Emergency contact information (SOS 1767, IMH 6389-2222)  
+3. Clear steps for immediate safety
+4. Encourage professional help with Sunny's caring tone
+
+Be Sunny - warm but urgent. Show you care while getting them help right now.
+Use phrases like: "I'm here with you right now", "Your safety matters to me"
+
+Your caring crisis response as Sunny:"""
+    )
     
     try:
         response = llm.invoke(crisis_prompt).content
     except Exception as e:
         # Fallback crisis response
         response = """
-        🆘 I'm here to help you right now. You're not alone in this.
+        🆘 Hey, I'm Sunny, and I'm here with you right now. You're not alone in this, okay?
         
-        IMMEDIATE SUPPORT:
-        • SOS Hotline: 1767 (24/7, free)
-        • IMH Emergency: 6389-2222
-        • CHAT Youth Support: 6493-6500
+        I care about you, and I want you to be safe. Please reach out to someone who can help you right now:
+        
+        • SOS Hotline: 1767 (24/7, free) - They're amazing listeners
+        • IMH Emergency: 6389-2222 - Professional crisis support
+        • CHAT Youth Support: 6493-6500 - If you're 16-30
         
         Please reach out to one of these services immediately. Your life matters.
         """

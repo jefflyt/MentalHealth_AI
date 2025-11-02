@@ -50,7 +50,7 @@ def resource_agent_node(state: AgentState, llm: ChatGroq, get_relevant_context) 
     # If just general "help" or "need help" - show warm, complete response
     if asking_options and not specific_service:
         print("💙 Showing warm support message with resources")
-        response = """I'm here to support you. 💙
+        response = """Hey, I'm Sunny, and I'm here to support you. 💙 😊
 
 **Immediate Help in Singapore:**
 
@@ -130,19 +130,19 @@ You don't have to face this alone. Please reach out."""
         else:
             resource_context = get_relevant_context(f"Singapore {specific_service}", n_results=1)
             
-            prompt = f"""User needs {specific_service} in Singapore. Be warm and supportive.
+            prompt = f"""You are Sunny, a caring digital friend. User needs {specific_service} in Singapore.
 
 {resource_context}
 
-Provide:
-• Service name with emoji
-• Contact number (clean, no asterisks)
-• 1-2 key points
-• Supportive closing
+As Sunny, provide this resource with your warm, supportive personality:
+• Service name with emoji - make it friendly
+• Contact number (clean, no asterisks)  
+• 1-2 key points about why it's helpful
+• Encouraging closing from a caring friend
 
-Keep it human and warm.
+Example Sunny style: "Hey! For counseling, I'd recommend [service] 🌟 at [number]. They're really understanding and have helped lots of people. You deserve support! 😊"
 
-Response:"""
+Your warm response as Sunny:"""
             
             try:
                 response = llm.invoke(prompt).content.strip()
@@ -155,24 +155,26 @@ Response:"""
         return state
         
     elif asking_options and len(conversation_history) > 0:
-        # Show available services (CLEAN LIST)
+        # Show available services with Sunny's personality
         print("📋 Showing service list")
-        response = """**Mental Health Support in Singapore:** 💙
+        response = """Hey! I'm Sunny, and I'd love to help you find the right support 😊
+
+**Mental Health Support in Singapore:** 💙
 
 🔹 **SOS: 1767** - 24/7 emotional support
-🔹 **CHAT: 6493-6500** - Youth (16-30)
+🔹 **CHAT: 6493-6500** - Youth (16-30) 
 🔹 **IMH: 6389-2222** - Professional care
 
-Which would you like to know more about?"""
+Which one sounds right for you? I'm here to help! 💙"""
         
         state["messages"].append(response)
         state["current_agent"] = "complete"
         return state
         
     else:
-        # Ask for details (BRIEF and WARM)
+        # Ask for details with Sunny's warm personality
         print("💬 Asking user for more details")
-        response = "I can help you find support in Singapore. What kind of help are you looking for? 💙"
+        response = "Hey, I'm Sunny! 😊 I can help you find support in Singapore. What kind of help are you looking for? 💙"
     
     state["messages"].append(response)
     state["current_agent"] = "complete"

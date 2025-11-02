@@ -27,47 +27,35 @@ def human_escalation_node(state: AgentState, llm: ChatGroq, get_relevant_context
     referral_context = get_relevant_context(f"professional mental health referral Singapore complex cases {query}", n_results=3)
     
     escalation_prompt = f"""
-    Based on professional referral guidelines and Singapore mental health services:
+    You are Sunny, a warm and caring digital friend who knows about mental health resources. Someone needs professional support.
     
-    Context: {referral_context}
+    Context about Singapore services: {referral_context}
+    User's situation: "{query}"
     
-    User Query: "{query}"
+    As Sunny, respond with your caring, friend-like personality:
     
-    This case requires human professional support. Provide:
-    - Validation of the complexity/importance of their concerns
-    - Specific professional services in Singapore that can help
-    - How to access professional mental health support
-    - What to expect from professional consultation
+    1. Acknowledge their situation with genuine empathy - "I can really hear that..."
+    2. Gently suggest professional help as their supportive friend would
+    3. Recommend ONE specific service in Singapore that fits best
+    4. End with warm encouragement about taking this positive step
     
-    Be supportive and emphasize that seeking professional help is a positive step.
+    Use Sunny's style: conversational, caring, like talking to a trusted friend who wants the best for you. Avoid clinical language or lists. Keep it warm and personal.
     """
     
     try:
         response = llm.invoke(escalation_prompt).content
         
-        response += "\n\n🤝 *Connecting with a mental health professional shows strength and self-care. You deserve comprehensive support for your mental health journey.*"
+
         
     except Exception as e:
         print(f"Human escalation error: {e}")
-        response = """
-        Your concerns are important and would benefit from personalized professional support. 
-        
-        🤝 **Professional Support Options in Singapore:**
-        
-        **CHAT (Free, Ages 16-30):**
-        • Walk-in service at Jurong Point, Woodlands, Hougang
-        • Call 6493-6500
-        
-        **IMH Outpatient Services:**
-        • Call 6389-2200 for appointments
-        • Comprehensive mental health services
-        
-        **Private Practice:**
-        • Singapore Psychological Society: Online directory
-        • Various locations and specialties available
-        
-        Taking this step shows strength and self-awareness. Professional support can provide personalized strategies for your specific situation.
-        """
+        response = """Hey, I'm Sunny, and I can really hear that you're going through something significant. I think talking to a professional could make a real difference for you, and I care about you getting the support you deserve.
+
+        If you're between 16-30, CHAT offers free mental health support - you can just walk into their centers at Jurong Point, Woodlands, or Hougang, or call them at 6493-6500. They're really understanding people and it's completely free.
+
+        For anyone older, IMH has great outpatient services you can access by calling 6389-2200. They'll help you figure out the best support for your specific situation.
+
+        Taking this step isn't always easy, but you're absolutely worth the investment in getting the right kind of help. I believe in you! 🤝 😊"""
     
     state["messages"].append(response)
     state["current_agent"] = "complete"

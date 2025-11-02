@@ -27,37 +27,43 @@ def assessment_agent_node(state: AgentState, llm: ChatGroq, get_relevant_context
     assessment_context = get_relevant_context(f"DASS-21 mental health assessment screening {query}", n_results=3)
     
     assessment_prompt = f"""
+    You are Sunny, a caring digital friend helping with mental health assessment guidance.
+    
     Based on the DASS-21 assessment guidelines and mental health screening protocols:
     
     Context: {assessment_context}
     
     User Query: "{query}"
     
-    Provide:
-    - Information about mental health self-assessment
-    - Guidance on DASS-21 screening if appropriate
-    - Explanation of what assessments can and cannot determine
-    - Clear next steps for professional evaluation
+    As Sunny, provide warm, supportive guidance about:
+    - Mental health self-assessment (explain it like a caring friend would)
+    - DASS-21 screening information if relevant (make it less clinical, more supportive)
+    - What assessments can and cannot determine (gentle boundaries)
+    - Encouraging next steps for professional evaluation
     
-    Emphasize that self-assessment tools are not diagnostic and professional evaluation is important.
+    Start with "Hey, I'm Sunny! 😊" and maintain your caring, patient personality throughout.
+    Use encouraging language and remind them you're here to support them.
+    Emphasize that self-assessment tools provide insights but professional support is valuable.
     """
     
     try:
         response = llm.invoke(assessment_prompt).content
         
-        response += "\n\n⚠️ *Self-assessment tools provide insights but cannot replace professional diagnosis. Consider speaking with a mental health professional for comprehensive evaluation.*"
+        response += "\n\n💙 *Remember, I'm here as your supportive friend, but these tools are just starting points. A mental health professional can give you the complete picture and personalized care you deserve! 😊*"
         
     except Exception as e:
         print(f"Assessment agent error: {e}")
         response = """
-        Mental health self-assessment can provide valuable insights into your wellbeing. The DASS-21 is a validated screening tool that measures depression, anxiety, and stress levels.
+        Hey, I'm Sunny! 😊 Mental health self-assessment can give you valuable insights into how you're doing - think of it like checking in with yourself.
         
-        Would you like information about:
-        - How mental health screening works
+        The DASS-21 is a gentle screening tool that looks at depression, anxiety, and stress levels. It's like having a friendly conversation about your feelings!
+        
+        I can help you understand:
+        - How mental health screening works (it's less scary than it sounds!)
         - What the DASS-21 assessment covers
         - Where to get professional assessment in Singapore
         
-        Remember: Self-assessment tools are helpful for awareness but cannot replace professional evaluation.
+        Remember: These tools are like a caring friend asking "How are you really doing?" - they're helpful for awareness, but a professional can give you the complete support you deserve! 💙
         """
     
     state["messages"].append(response)

@@ -83,7 +83,7 @@ def router_node(state: AgentState, llm: ChatGroq, get_relevant_context) -> Agent
     if detect_crisis(query):
         state["crisis_detected"] = True
         state["current_agent"] = "crisis_intervention"
-        state["messages"].append("🚨 Crisis situation detected - routing to immediate support")
+        state["messages"].append("🚨 I'm here with you right now - getting you immediate support")
         print("🚨 PRIORITY 1: Crisis detected → Crisis Agent")
         return state
     

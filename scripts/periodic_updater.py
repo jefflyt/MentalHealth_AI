@@ -8,7 +8,7 @@ import sys
 import time
 import schedule
 from datetime import datetime
-from web_scraper import MentalHealthWebScraper
+from .web_scraper import MentalHealthWebScraper
 from agent.update_agent import UpdateAgent
 
 class PeriodicUpdater:
