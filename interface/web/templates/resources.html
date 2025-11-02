@@ -1,0 +1,655 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-Frame-Options" content="SAMEORIGIN">
+    <title>Sunny - Resources</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html, body {
+            height: 100%;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background-color: #f9fafb;
+        }
+
+        .tab-content {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            background: #f9fafb;
+        }
+
+        .resources-container {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+        }
+
+        .resources-header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid #f1f3f4;
+        }
+
+        .resources-header h2 {
+            color: #667eea;
+            margin-bottom: 8px;
+            font-size: 28px;
+        }
+
+        .resources-subtitle {
+            color: #666;
+            font-size: 16px;
+            margin: 0;
+        }
+
+        .resource-categories {
+            display: grid;
+            gap: 40px;
+        }
+
+        .category-section {
+            background: #fafbfc;
+            border-radius: 16px;
+            padding: 25px;
+            border: 1px solid #e9ecef;
+        }
+
+        .category-header {
+            display: flex;
+            align-items: flex-start;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .category-icon {
+            font-size: 32px;
+            line-height: 1;
+        }
+
+        .category-header h3 {
+            color: #333;
+            margin: 0 0 5px 0;
+            font-size: 22px;
+            font-weight: 600;
+        }
+
+        .category-description {
+            color: #666;
+            margin: 0;
+            font-size: 14px;
+            line-height: 1.4;
+        }
+
+        .resource-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+
+        .resource-card {
+            background: white;
+            border: 2px solid #e9ecef;
+            border-radius: 12px;
+            padding: 20px;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .resource-card:hover {
+            border-color: #667eea;
+            box-shadow: 0 4px 20px rgba(102, 126, 234, 0.1);
+            transform: translateY(-2px);
+        }
+
+        .resource-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 12px;
+        }
+
+        .resource-header h4 {
+            color: #333;
+            margin: 0;
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        .resource-description {
+            color: #666;
+            margin: 0 0 20px 0;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+
+        .resource-contact {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .contact-link {
+            background: #667eea;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 8px;
+            text-decoration: none;
+            font-size: 13px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .contact-link:hover {
+            background: #5a67d8;
+            transform: translateY(-1px);
+        }
+
+        .contact-link.primary {
+            background: #e74c3c;
+        }
+
+        .contact-link.primary:hover {
+            background: #c0392b;
+        }
+
+        .contact-link.secondary {
+            background: #6c757d;
+        }
+
+        .contact-link.secondary:hover {
+            background: #545b62;
+        }
+
+        .contact-note {
+            font-size: 12px;
+            color: #999;
+            font-style: italic;
+        }
+
+        /* Badges */
+        .availability-badge,
+        .target-badge,
+        .service-badge,
+        .source-badge {
+            font-size: 11px;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .availability-badge {
+            background: #e74c3c;
+            color: white;
+        }
+
+        .target-badge {
+            background: #3498db;
+            color: white;
+        }
+
+        .service-badge {
+            background: #27ae60;
+            color: white;
+        }
+
+        .source-badge {
+            background: #9b59b6;
+            color: white;
+        }
+
+        /* Category-specific styling */
+        .emergency-category {
+            border-left: 4px solid #e74c3c;
+        }
+
+        .emergency-card {
+            border-left: 3px solid #e74c3c;
+        }
+
+        .counseling-category {
+            border-left: 4px solid #3498db;
+        }
+
+        .counseling-card {
+            border-left: 3px solid #3498db;
+        }
+
+        .educational-category {
+            border-left: 4px solid #27ae60;
+        }
+
+        .educational-card {
+            border-left: 3px solid #27ae60;
+        }
+
+        .support-category {
+            border-left: 4px solid #9b59b6;
+        }
+
+        .support-card {
+            border-left: 3px solid #9b59b6;
+        }
+
+        .resources-footer {
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 2px solid #f1f3f4;
+        }
+
+        .disclaimer {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .disclaimer h4 {
+            color: #856404;
+            margin: 0 0 10px 0;
+            font-size: 16px;
+        }
+
+        .disclaimer p {
+            color: #856404;
+            margin: 0;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+
+        /* Mobile responsive */
+        @media (max-width: 768px) {
+            .resources-container {
+                padding: 15px;
+            }
+
+            .resource-categories {
+                gap: 25px;
+            }
+
+            .category-section {
+                padding: 20px 15px;
+            }
+
+            .category-header {
+                flex-direction: column;
+                gap: 10px;
+                text-align: center;
+            }
+
+            .category-icon {
+                font-size: 28px;
+            }
+
+            .category-header h3 {
+                font-size: 20px;
+            }
+
+            .resource-grid {
+                grid-template-columns: 1fr;
+                gap: 15px;
+            }
+
+            .resource-card {
+                padding: 15px;
+            }
+
+            .resource-header {
+                flex-direction: column;
+                gap: 8px;
+                align-items: flex-start;
+            }
+
+            .resource-contact {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 8px;
+            }
+
+            .contact-link {
+                width: 100%;
+                justify-content: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Resources Tab -->
+    <div id="resources-tab" class="tab-content">
+        <div class="resources-container">
+            <div class="resources-header">
+                <h2>📚 Mental Health Resources</h2>
+                <p class="resources-subtitle">Find professional help, support groups, and self-care resources in Singapore</p>
+            </div>
+
+            <div class="resource-categories">
+                <!-- Emergency Services -->
+                <div class="category-section emergency-category">
+                    <div class="category-header">
+                        <div class="category-icon">🚨</div>
+                        <div>
+                            <h3>Emergency & Crisis Support</h3>
+                            <p class="category-description">Immediate help for mental health crises and emergencies</p>
+                        </div>
+                    </div>
+
+                    <div class="resource-grid">
+                        <div class="resource-card emergency-card">
+                            <div class="resource-header">
+                                <h4>🚨 Singapore Civil Defence Force (SCDF) Ambulance</h4>
+                                <div class="availability-badge">24/7</div>
+                            </div>
+                            <div class="resource-description">
+                                Emergency medical services for life-threatening situations
+                            </div>
+                            <div class="resource-contact">
+                                <a href="tel:995" class="contact-link primary">
+                                    📞 Call 995
+                                </a>
+                            </div>
+                        </div>
+
+                        <div class="resource-card emergency-card">
+                            <div class="resource-header">
+                                <h4>🚔 Police Emergency Hotline</h4>
+                                <div class="availability-badge">24/7</div>
+                            </div>
+                            <div class="resource-description">
+                                For immediate danger or crime-related emergencies
+                            </div>
+                            <div class="resource-contact">
+                                <a href="tel:999" class="contact-link primary">
+                                    📞 Call 999
+                                </a>
+                            </div>
+                        </div>
+
+                        <div class="resource-card emergency-card">
+                            <div class="resource-header">
+                                <h4>🏥 Institute of Mental Health (IMH) Emergency</h4>
+                                <div class="availability-badge">24/7</div>
+                            </div>
+                            <div class="resource-description">
+                                Psychiatric emergency services and crisis intervention
+                            </div>
+                            <div class="resource-contact">
+                                <a href="tel:+6563842000" class="contact-link primary">
+                                    📞 +65 6384 2000
+                                </a>
+                            </div>
+                        </div>
+
+                        <div class="resource-card emergency-card">
+                            <div class="resource-header">
+                                <h4>💬 Samaritans of Singapore (SOS)</h4>
+                                <div class="availability-badge">24/7</div>
+                            </div>
+                            <div class="resource-description">
+                                Suicide prevention and emotional support hotline
+                            </div>
+                            <div class="resource-contact">
+                                <a href="tel:18002214444" class="contact-link primary">
+                                    📞 1800 221 4444
+                                </a>
+                                <div class="contact-note">Available in English, Mandarin, Malay, Tamil</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Counseling Services -->
+                <div class="category-section counseling-category">
+                    <div class="category-header">
+                        <div class="category-icon">💬</div>
+                        <div>
+                            <h3>Counseling & Therapy Services</h3>
+                            <p class="category-description">Professional mental health counseling and therapy options</p>
+                        </div>
+                    </div>
+
+                    <div class="resource-grid">
+                        <div class="resource-card counseling-card">
+                            <div class="resource-header">
+                                <h4>🏥 Institute of Mental Health (IMH)</h4>
+                                <div class="service-badge">Specialist</div>
+                            </div>
+                            <div class="resource-description">
+                                Singapore's primary psychiatric hospital offering comprehensive mental health services
+                            </div>
+                            <div class="resource-contact">
+                                <a href="https://www.imh.com.sg" class="contact-link" target="_blank">
+                                    🌐 Visit Website
+                                </a>
+                                <a href="tel:+6563842000" class="contact-link secondary">
+                                    📞 +65 6384 2000
+                                </a>
+                            </div>
+                        </div>
+
+                        <div class="resource-card counseling-card">
+                            <div class="resource-header">
+                                <h4>🏥 National University Hospital (NUH)</h4>
+                                <div class="service-badge">General</div>
+                            </div>
+                            <div class="resource-description">
+                                Mental health services including psychiatry and counseling
+                            </div>
+                            <div class="resource-contact">
+                                <a href="https://www.nuh.com.sg" class="contact-link" target="_blank">
+                                    🌐 Visit Website
+                                </a>
+                                <a href="tel:+6567722000" class="contact-link secondary">
+                                    📞 +65 6772 2000
+                                </a>
+                            </div>
+                        </div>
+
+                        <div class="resource-card counseling-card">
+                            <div class="resource-header">
+                                <h4>💭 Silver Ribbon Singapore</h4>
+                                <div class="target-badge">Youth</div>
+                            </div>
+                            <div class="resource-description">
+                                Mental health advocacy and support services, especially for youth
+                            </div>
+                            <div class="resource-contact">
+                                <a href="https://www.silverribbonsingapore.com" class="contact-link" target="_blank">
+                                    🌐 Visit Website
+                                </a>
+                                <a href="tel:+6563363277" class="contact-link secondary">
+                                    📞 +65 6336 3277
+                                </a>
+                            </div>
+                        </div>
+
+                        <div class="resource-card counseling-card">
+                            <div class="resource-header">
+                                <h4>🎓 TOUCH Community Services</h4>
+                                <div class="target-badge">Youth</div>
+                            </div>
+                            <div class="resource-description">
+                                Counseling services for youth and families
+                            </div>
+                            <div class="resource-contact">
+                                <a href="https://www.touch.org.sg" class="contact-link" target="_blank">
+                                    🌐 Visit Website
+                                </a>
+                                <a href="tel:+6563363277" class="contact-link secondary">
+                                    📞 +65 6336 3277
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Educational Resources -->
+                <div class="category-section educational-category">
+                    <div class="category-header">
+                        <div class="category-icon">📖</div>
+                        <div>
+                            <h3>Educational Resources</h3>
+                            <p class="category-description">Learn about mental health, coping strategies, and self-care</p>
+                        </div>
+                    </div>
+
+                    <div class="resource-grid">
+                        <div class="resource-card educational-card">
+                            <div class="resource-header">
+                                <h4>🧠 Mental Health Education</h4>
+                                <div class="source-badge">IMH</div>
+                            </div>
+                            <div class="resource-description">
+                                Educational materials about mental health conditions and treatments
+                            </div>
+                            <div class="resource-contact">
+                                <a href="https://www.imh.com.sg/clinical/page.aspx?id=122" class="contact-link" target="_blank">
+                                    📚 Learn More
+                                </a>
+                            </div>
+                        </div>
+
+                        <div class="resource-card educational-card">
+                            <div class="resource-header">
+                                <h4>🌱 Coping Strategies</h4>
+                                <div class="source-badge">NEA</div>
+                            </div>
+                            <div class="resource-description">
+                                Practical tips for managing stress and maintaining mental wellbeing
+                            </div>
+                            <div class="resource-contact">
+                                <a href="https://www.imh.com.sg/wellness/page.aspx?id=122" class="contact-link" target="_blank">
+                                    📚 Learn More
+                                </a>
+                            </div>
+                        </div>
+
+                        <div class="resource-card educational-card">
+                            <div class="resource-header">
+                                <h4>👨‍👩‍👧‍👦 Family Support</h4>
+                                <div class="source-badge">MSF</div>
+                            </div>
+                            <div class="resource-description">
+                                Resources for families supporting loved ones with mental health conditions
+                            </div>
+                            <div class="resource-contact">
+                                <a href="https://www.imh.com.sg/family" class="contact-link" target="_blank">
+                                    📚 Learn More
+                                </a>
+                            </div>
+                        </div>
+
+                        <div class="resource-card educational-card">
+                            <div class="resource-header">
+                                <h4>🎓 Youth Mental Health</h4>
+                                <div class="target-badge">Youth</div>
+                            </div>
+                            <div class="resource-description">
+                                Mental health resources specifically for young people and students
+                            </div>
+                            <div class="resource-contact">
+                                <a href="https://www.reach.org.sg" class="contact-link" target="_blank">
+                                    📚 Learn More
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Community Support -->
+                <div class="category-section support-category">
+                    <div class="category-header">
+                        <div class="category-icon">🤝</div>
+                        <div>
+                            <h3>Community Support</h3>
+                            <p class="category-description">Peer support groups, helplines, and community resources</p>
+                        </div>
+                    </div>
+
+                    <div class="resource-grid">
+                        <div class="resource-card support-card">
+                            <div class="resource-header">
+                                <h4>📞 Mental Health Helpline</h4>
+                                <div class="availability-badge">24/7</div>
+                            </div>
+                            <div class="resource-description">
+                                Free 24/7 counseling and emotional support
+                            </div>
+                            <div class="resource-contact">
+                                <a href="tel:18002022121" class="contact-link">
+                                    📞 1800 202 2121
+                                </a>
+                            </div>
+                        </div>
+
+                        <div class="resource-card support-card">
+                            <div class="resource-header">
+                                <h4>💙 Caregiver Support</h4>
+                                <div class="target-badge">Caregivers</div>
+                            </div>
+                            <div class="resource-description">
+                                Support for those caring for someone with mental health conditions
+                            </div>
+                            <div class="resource-contact">
+                                <a href="https://www.imh.com.sg/caregivers" class="contact-link" target="_blank">
+                                    🤝 Get Support
+                                </a>
+                            </div>
+                        </div>
+
+                        <div class="resource-card support-card">
+                            <div class="resource-header">
+                                <h4>🏢 Workplace Support</h4>
+                                <div class="target-badge">Workplace</div>
+                            </div>
+                            <div class="resource-description">
+                                Mental health resources for employers and employees
+                            </div>
+                            <div class="resource-contact">
+                                <a href="https://www.mom.gov.sg/employment-practices/mental-health-in-the-workplace" class="contact-link" target="_blank">
+                                    🏢 Learn More
+                                </a>
+                            </div>
+                        </div>
+
+                        <div class="resource-card support-card">
+                            <div class="resource-header">
+                                <h4>🌍 International Resources</h4>
+                                <div class="source-badge">Global</div>
+                            </div>
+                            <div class="resource-description">
+                                Additional international mental health resources and hotlines
+                            </div>
+                            <div class="resource-contact">
+                                <a href="https://www.befrienders.org" class="contact-link" target="_blank">
+                                    🌍 Find Help
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="resources-footer">
+                <div class="disclaimer">
+                    <h4>⚠️ Important Disclaimer</h4>
+                    <p>This resource guide is for informational purposes only and does not constitute medical advice. If you're experiencing a mental health crisis, please contact emergency services immediately. Always consult with qualified mental health professionals for personalized care.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

@@ -1,0 +1,992 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-Frame-Options" content="SAMEORIGIN">
+    <title>Sunny - Self-Assessment</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html, body {
+            height: 100%;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background-color: #f9fafb;
+        }
+
+        .tab-content {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            background: #f9fafb;
+        }
+
+        .assessment-container {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+        }
+
+        .assessment-header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid #f1f3f4;
+        }
+
+        .assessment-header h2 {
+            color: #667eea;
+            margin-bottom: 10px;
+            font-size: 28px;
+        }
+
+        .assessment-header p {
+            color: #666;
+            font-size: 16px;
+            line-height: 1.6;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .assessment-options {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .assessment-card {
+            background: white;
+            border: 2px solid #e9ecef;
+            border-radius: 12px;
+            padding: 20px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-align: center;
+        }
+
+        .assessment-card:hover {
+            border-color: #667eea;
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15);
+            transform: translateY(-2px);
+        }
+
+        .assessment-card h3 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 20px;
+        }
+
+        .assessment-card p {
+            color: #666;
+            margin-bottom: 15px;
+            line-height: 1.5;
+        }
+
+        .assessment-duration {
+            background: #f8f9fa;
+            color: #667eea;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 500;
+            display: inline-block;
+        }
+
+        /* Assessment Questions Styles */
+        .assessment-questions {
+            margin-top: 20px;
+        }
+
+        .question-card {
+            background: white;
+            border: 2px solid #e9ecef;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            transition: all 0.3s ease;
+        }
+
+        .question-card.answered {
+            border-color: #667eea;
+            background: #f8f9fa;
+        }
+
+        .question-number {
+            background: #667eea;
+            color: white;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            font-size: 14px;
+            margin-bottom: 15px;
+        }
+
+        .question-text {
+            font-size: 16px;
+            color: #333;
+            margin-bottom: 20px;
+            line-height: 1.5;
+        }
+
+        .rating-options {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .rating-option {
+            background: white;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            padding: 12px 8px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 13px;
+            font-weight: 500;
+        }
+
+        .rating-option:hover {
+            border-color: #667eea;
+            background: #f8f9fa;
+        }
+
+        .rating-option.selected {
+            border-color: #667eea;
+            background: #667eea;
+            color: white;
+        }
+
+        .assessment-progress {
+            background: #f8f9fa;
+            border-radius: 20px;
+            height: 8px;
+            margin: 20px 0;
+            overflow: hidden;
+        }
+
+        .progress-bar {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            height: 100%;
+            border-radius: 20px;
+            transition: width 0.3s ease;
+            width: 0%;
+        }
+
+        .progress-text {
+            text-align: center;
+            font-size: 14px;
+            color: #666;
+            margin-top: 10px;
+        }
+
+        .assessment-actions {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            margin-top: 30px;
+            flex-wrap: wrap;
+        }
+
+        .action-btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 25px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .action-btn:hover {
+            background: #5a67d8;
+            transform: translateY(-2px);
+        }
+
+        .action-btn.secondary {
+            background: #6c757d;
+        }
+
+        .action-btn.secondary:hover {
+            background: #5a6268;
+        }
+
+        .submit-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 25px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 20px;
+        }
+
+        .submit-btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+
+        .submit-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .assessment-results {
+            background: white;
+            border: 2px solid #e9ecef;
+            border-radius: 12px;
+            padding: 30px;
+            margin-top: 20px;
+            text-align: center;
+        }
+
+        .results-header {
+            margin-bottom: 25px;
+        }
+
+        .results-header h3 {
+            color: #667eea;
+            margin-bottom: 10px;
+            font-size: 24px;
+        }
+
+        .score-card {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 20px;
+            margin: 15px 0;
+            text-align: left;
+        }
+
+        .score-category {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .score-label {
+            font-weight: 600;
+            color: #333;
+        }
+
+        .score-value {
+            font-weight: 700;
+            font-size: 18px;
+        }
+
+        .score-level {
+            font-size: 12px;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .level-normal {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .level-mild {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .level-moderate {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .level-severe {
+            background: #f5c6cb;
+            color: #721c24;
+        }
+
+        .results-interpretation {
+            background: #e3f2fd;
+            border-left: 4px solid #667eea;
+            padding: 20px;
+            margin: 20px 0;
+            text-align: left;
+        }
+
+        .results-interpretation h4 {
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+
+        .results-interpretation p {
+            color: #333;
+            line-height: 1.6;
+            margin-bottom: 10px;
+        }
+
+        .assessment-screen {
+            display: none;
+        }
+
+        .assessment-screen.active {
+            display: block;
+        }
+
+        /* Mobile responsive */
+        @media (max-width: 768px) {
+            .assessment-container {
+                padding: 15px;
+            }
+
+            .rating-options {
+                grid-template-columns: 1fr;
+                gap: 8px;
+            }
+
+            .rating-option {
+                padding: 10px;
+                font-size: 12px;
+            }
+
+            .assessment-actions {
+                flex-direction: column;
+                align-items: center;
+            }
+
+            .action-btn {
+                width: 100%;
+                max-width: 300px;
+                justify-content: center;
+            }
+
+            .question-card {
+                padding: 15px;
+            }
+
+            .question-text {
+                font-size: 15px;
+            }
+
+            .assessment-options {
+                grid-template-columns: 1fr;
+                gap: 15px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Self-Assessment Tab -->
+    <div id="assessment-tab" class="tab-content">
+        <div class="assessment-container">
+            <!-- Assessment Selection Screen -->
+            <div id="assessment-selection" class="assessment-screen active">
+                <div class="assessment-header">
+                    <h2>🧠 Self-Assessment Tools</h2>
+                    <p>Take a moment to check in with yourself. These assessments can help you understand your current mental health and guide you toward appropriate support.</p>
+                </div>
+
+                <div class="assessment-options">
+                    <div class="assessment-card" onclick="startAssessment('dass21')">
+                        <h3>DASS-21 Assessment</h3>
+                        <p>Comprehensive evaluation of depression, anxiety, and stress levels</p>
+                        <div class="assessment-duration">~5-7 minutes</div>
+                    </div>
+
+                    <div class="assessment-card" onclick="startAssessment('mood')">
+                        <h3>Quick Mood Check</h3>
+                        <p>A gentle check-in with your current emotional state</p>
+                        <div class="assessment-duration">~2 minutes</div>
+                    </div>
+
+                    <div class="assessment-card" onclick="startAssessment('stress')">
+                        <h3>Stress Level Check</h3>
+                        <p>Evaluate your current stress levels and coping mechanisms</p>
+                        <div class="assessment-duration">~3 minutes</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Assessment Questions Screen -->
+            <div id="assessment-questions" class="assessment-screen">
+                <div class="assessment-header">
+                    <h2 id="assessment-title">Assessment</h2>
+                    <p id="assessment-description">Please answer each question honestly.</p>
+                </div>
+
+                <div class="assessment-questions">
+                    <div class="question-card" id="current-question">
+                        <!-- Question content will be inserted here by JavaScript -->
+                    </div>
+
+                    <div class="assessment-progress">
+                        <div class="progress-bar" id="progress-bar"></div>
+                    </div>
+                    <div class="progress-text" id="progress-text">Question 1 of 21</div>
+
+                    <div class="assessment-actions">
+                        <button class="action-btn secondary" id="prev-btn" onclick="previousQuestion()" style="display: none;">
+                            <span>⬅️</span> Previous
+                        </button>
+                        <button class="action-btn" id="next-btn" onclick="nextQuestion()">
+                            Next <span>➡️</span>
+                        </button>
+                        <button class="submit-btn" id="submit-assessment-btn" onclick="submitAssessment()" style="display: none;">
+                            Submit Assessment
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Assessment Results Screen -->
+            <div id="assessment-results" class="assessment-screen">
+                <div class="assessment-results">
+                    <div class="results-header">
+                        <h3>Your Assessment Results</h3>
+                        <p>Remember, this is not a clinical diagnosis but can help guide your self-care journey.</p>
+                    </div>
+
+                    <div id="results-content">
+                        <!-- Results will be inserted here -->
+                    </div>
+
+                    <div class="results-interpretation">
+                        <h4>💡 What This Means</h4>
+                        <p id="interpretation-text">Based on your responses, here are some insights about your current mental health state.</p>
+                    </div>
+
+                    <div class="assessment-actions">
+                        <button class="action-btn secondary" onclick="retakeAssessment()">
+                            <span>🔄</span> Retake Assessment
+                        </button>
+                        <button class="action-btn" onclick="chatAboutResults()">
+                            <span>💬</span> Chat with Sunny
+                        </button>
+                        <button class="action-btn secondary" onclick="getResources()">
+                            <span>📚</span> Get Resources
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Assessment state variables
+        let currentAssessment = null;
+        let currentQuestionIndex = 0;
+        let assessmentAnswers = [];
+        let assessmentData = {};
+        let sessionAssessmentResults = {}; // Store results for the session
+
+        // DASS-21 Questions (7 for each category: Depression, Anxiety, Stress)
+        const DASS21_QUESTIONS = {
+            title: "DASS-21 Assessment",
+            description: "Please read each statement and select how much it applied to you over the past week. There are no right or wrong answers.",
+            questions: [
+                // Depression items (items 3, 5, 10, 13, 16, 17, 21)
+                { text: "I couldn't seem to experience any positive feeling at all", category: "depression" },
+                { text: "I found it difficult to work up the initiative to do things", category: "depression" },
+                { text: "I felt that I had nothing to look forward to", category: "depression" },
+                { text: "I felt down-hearted and blue", category: "depression" },
+                { text: "I was unable to become enthusiastic about anything", category: "depression" },
+                { text: "I felt I wasn't worth much as a person", category: "depression" },
+                { text: "I felt that life was meaningless", category: "depression" },
+
+                // Anxiety items (items 2, 4, 7, 9, 15, 19, 20)
+                { text: "I was aware of dryness of my mouth", category: "anxiety" },
+                { text: "I experienced breathing difficulty (e.g., excessively rapid breathing, breathlessness)", category: "anxiety" },
+                { text: "I experienced trembling (e.g., in the hands)", category: "anxiety" },
+                { text: "I was worried about situations in which I might panic and make a fool of myself", category: "anxiety" },
+                { text: "I felt I was close to panic", category: "anxiety" },
+                { text: "I was aware of the action of my heart in the absence of physical exertion", category: "anxiety" },
+                { text: "I felt scared without any good reason", category: "anxiety" },
+
+                // Stress items (items 1, 6, 8, 11, 12, 14, 18)
+                { text: "I found it hard to wind down", category: "stress" },
+                { text: "I tended to over-react to situations", category: "stress" },
+                { text: "I felt that I was using a lot of nervous energy", category: "stress" },
+                { text: "I found myself getting agitated", category: "stress" },
+                { text: "I found it difficult to relax", category: "stress" },
+                { text: "I was intolerant of anything that kept me from getting on with what I was doing", category: "stress" },
+                { text: "I felt that I was rather touchy", category: "stress" }
+            ],
+            scale: [
+                { value: 0, label: "Never" },
+                { value: 1, label: "Sometimes" },
+                { value: 2, label: "Often" },
+                { value: 3, label: "Almost Always" }
+            ]
+        };
+
+        const MOOD_CHECK_QUESTIONS = {
+            title: "Quick Mood Check",
+            description: "A gentle check-in with your current emotional state.",
+            questions: [
+                { text: "How would you rate your overall mood today?", category: "mood", scale: "mood" },
+                { text: "How is your energy level right now?", category: "energy", scale: "energy" },
+                { text: "How well did you sleep last night?", category: "sleep", scale: "quality" },
+                { text: "How anxious or worried do you feel right now?", category: "anxiety", scale: "agreement" },
+                { text: "How hopeful do you feel about the future?", category: "hope", scale: "agreement" }
+            ],
+            scales: {
+                mood: [
+                    { value: 0, label: "Very Low" },
+                    { value: 1, label: "Low" },
+                    { value: 2, label: "Neutral" },
+                    { value: 3, label: "Good" },
+                    { value: 4, label: "Excellent" }
+                ],
+                energy: [
+                    { value: 0, label: "Very Low" },
+                    { value: 1, label: "Low" },
+                    { value: 2, label: "Moderate" },
+                    { value: 3, label: "Good" },
+                    { value: 4, label: "Very High" }
+                ],
+                quality: [
+                    { value: 0, label: "Very Poorly" },
+                    { value: 1, label: "Poorly" },
+                    { value: 2, label: "Okay" },
+                    { value: 3, label: "Well" },
+                    { value: 4, label: "Very Well" }
+                ],
+                agreement: [
+                    { value: 0, label: "Not at All" },
+                    { value: 1, label: "A Little" },
+                    { value: 2, label: "Moderately" },
+                    { value: 3, label: "Quite a Bit" },
+                    { value: 4, label: "Very Much" }
+                ]
+            }
+        };
+
+        const STRESS_CHECK_QUESTIONS = {
+            title: "Stress Level Assessment",
+            description: "Let's check your current stress levels and how you're coping.",
+            questions: [
+                { text: "How often do you feel overwhelmed by your responsibilities?", category: "stress" },
+                { text: "How well are you able to relax when you have free time?", category: "relaxation" },
+                { text: "How often do you experience physical symptoms of stress (headaches, tension, etc.)?", category: "physical" },
+                { text: "How supported do you feel by the people in your life?", category: "support" },
+                { text: "How confident do you feel in your ability to handle challenges?", category: "confidence" },
+                { text: "How often do you find yourself worrying about things you can't control?", category: "worry" },
+                { text: "How well do you sleep when you're stressed?", category: "sleep" }
+            ],
+            scale: [
+                { value: 0, label: "Never/Rarely" },
+                { value: 1, label: "Sometimes" },
+                { value: 2, label: "Often" },
+                { value: 3, label: "Very Often" },
+                { value: 4, label: "Almost Always" }
+            ]
+        };
+
+        // Assessment functions
+        function startAssessment(type) {
+            currentAssessment = type;
+            currentQuestionIndex = 0;
+            assessmentAnswers = [];
+
+            // Set assessment data
+            switch(type) {
+                case 'dass21':
+                    assessmentData = DASS21_QUESTIONS;
+                    break;
+                case 'mood':
+                    assessmentData = MOOD_CHECK_QUESTIONS;
+                    break;
+                case 'stress':
+                    assessmentData = STRESS_CHECK_QUESTIONS;
+                    break;
+            }
+
+            // Initialize answers array
+            assessmentAnswers = new Array(assessmentData.questions.length).fill(null);
+
+            // Show questions screen
+            showScreen('assessment-questions');
+
+            // Set title and description
+            document.getElementById('assessment-title').textContent = assessmentData.title;
+            document.getElementById('assessment-description').textContent = assessmentData.description;
+
+            // Show first question
+            showQuestion(0);
+        }
+
+        function showScreen(screenId) {
+            // Hide all screens
+            const screens = document.querySelectorAll('.assessment-screen');
+            screens.forEach(screen => screen.style.display = 'none');
+
+            // Show selected screen
+            document.getElementById(screenId).style.display = 'block';
+        }
+
+        function showQuestion(index) {
+            currentQuestionIndex = index;
+            const question = assessmentData.questions[index];
+            const questionCard = document.getElementById('current-question');
+
+            // Update progress
+            const progress = ((index) / assessmentData.questions.length) * 100;
+            document.getElementById('progress-bar').style.width = progress + '%';
+            document.getElementById('progress-text').textContent = `Question ${index + 1} of ${assessmentData.questions.length}`;
+
+            // Get scale for this question
+            let scale = assessmentData.scale;
+            if (assessmentData.scales && question.scale) {
+                scale = assessmentData.scales[question.scale];
+            }
+
+            // Build question HTML
+            let optionsHTML = '';
+            scale.forEach((option, optionIndex) => {
+                const isSelected = assessmentAnswers[index] === option.value;
+                optionsHTML += `
+                    <div class="rating-option ${isSelected ? 'selected' : ''}" onclick="selectAnswer(${index}, ${option.value})">
+                        ${option.label}
+                    </div>
+                `;
+            });
+
+            questionCard.innerHTML = `
+                <div class="question-number">${index + 1}</div>
+                <div class="question-text">${question.text}</div>
+                <div class="rating-options">
+                    ${optionsHTML}
+                </div>
+            `;
+
+            // Update question card style if answered
+            if (assessmentAnswers[index] !== null) {
+                questionCard.classList.add('answered');
+            } else {
+                questionCard.classList.remove('answered');
+            }
+
+            // Update button visibility
+            updateNavigationButtons();
+        }
+
+        function selectAnswer(questionIndex, value) {
+            assessmentAnswers[questionIndex] = value;
+
+            // Update UI
+            const options = document.querySelectorAll('.rating-option');
+            options.forEach(option => option.classList.remove('selected'));
+            event.target.classList.add('selected');
+
+            // Mark question as answered
+            document.getElementById('current-question').classList.add('answered');
+
+            // Update navigation buttons
+            updateNavigationButtons();
+        }
+
+        function updateNavigationButtons() {
+            const prevBtn = document.getElementById('prev-btn');
+            const nextBtn = document.getElementById('next-btn');
+            const submitBtn = document.getElementById('submit-assessment-btn');
+
+            // Show/hide previous button
+            prevBtn.style.display = currentQuestionIndex > 0 ? 'block' : 'none';
+
+            // Show/hide next button vs submit button
+            if (currentQuestionIndex === assessmentData.questions.length - 1) {
+                nextBtn.style.display = 'none';
+                submitBtn.style.display = 'block';
+                submitBtn.disabled = assessmentAnswers[currentQuestionIndex] === null;
+            } else {
+                nextBtn.style.display = 'block';
+                submitBtn.style.display = 'none';
+            }
+        }
+
+        function nextQuestion() {
+            if (currentQuestionIndex < assessmentData.questions.length - 1) {
+                currentQuestionIndex++;
+                showQuestion(currentQuestionIndex);
+            }
+        }
+
+        function previousQuestion() {
+            if (currentQuestionIndex > 0) {
+                currentQuestionIndex--;
+                showQuestion(currentQuestionIndex);
+            }
+        }
+
+        async function submitAssessment() {
+            // Calculate results based on assessment type
+            let results = {};
+
+            if (currentAssessment === 'dass21') {
+                results = calculateDASS21Results();
+            } else if (currentAssessment === 'mood') {
+                results = calculateMoodResults();
+            } else if (currentAssessment === 'stress') {
+                results = calculateStressResults();
+            }
+
+            // Store results in session storage for this session
+            sessionAssessmentResults = {
+                assessmentType: currentAssessment,
+                timestamp: new Date().toISOString(),
+                ...results
+            };
+
+            // Send results to backend for Sunny's context
+            try {
+                await fetch('/store-assessment-results', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(sessionAssessmentResults)
+                });
+                console.log('Assessment results stored for Sunny\'s context');
+            } catch (error) {
+                console.error('Error storing assessment results:', error);
+            }
+
+            // Show results
+            showAssessmentResults(results);
+        }
+
+        function calculateDASS21Results() {
+            const scores = { depression: 0, anxiety: 0, stress: 0 };
+
+            // Calculate scores for each category
+            assessmentData.questions.forEach((question, index) => {
+                scores[question.category] += assessmentAnswers[index] || 0;
+            });
+
+            // Multiply by 2 (DASS-21 scoring)
+            Object.keys(scores).forEach(key => {
+                scores[key] *= 2;
+            });
+
+            // Determine severity levels
+            const getLevel = (score, type) => {
+                if (type === 'depression') {
+                    if (score <= 9) return 'normal';
+                    if (score <= 13) return 'mild';
+                    if (score <= 20) return 'moderate';
+                    if (score <= 27) return 'severe';
+                    return 'extremely severe';
+                } else if (type === 'anxiety') {
+                    if (score <= 7) return 'normal';
+                    if (score <= 9) return 'mild';
+                    if (score <= 14) return 'moderate';
+                    if (score <= 19) return 'severe';
+                    return 'extremely severe';
+                } else if (type === 'stress') {
+                    if (score <= 14) return 'normal';
+                    if (score <= 18) return 'mild';
+                    if (score <= 25) return 'moderate';
+                    if (score <= 33) return 'severe';
+                    return 'extremely severe';
+                }
+                return 'normal';
+            };
+
+            return {
+                type: 'dass21',
+                depression: { score: scores.depression, level: getLevel(scores.depression, 'depression') },
+                anxiety: { score: scores.anxiety, level: getLevel(scores.anxiety, 'anxiety') },
+                stress: { score: scores.stress, level: getLevel(scores.stress, 'stress') }
+            };
+        }
+
+        function calculateMoodResults() {
+            const totalScore = assessmentAnswers.reduce((sum, answer) => sum + (answer || 0), 0);
+            const averageScore = totalScore / assessmentAnswers.length;
+
+            let interpretation = '';
+            if (averageScore >= 4) {
+                interpretation = "You're doing great! Your mood and energy levels seem positive today.";
+            } else if (averageScore >= 3) {
+                interpretation = "You're managing okay, but there might be some areas to focus on for better wellbeing.";
+            } else if (averageScore >= 2) {
+                interpretation = "It seems like you're going through a challenging time. Consider reaching out for support.";
+            } else {
+                interpretation = "It looks like you're experiencing some difficulties. Please consider speaking with a mental health professional.";
+            }
+
+            return {
+                type: 'mood',
+                totalScore: totalScore,
+                averageScore: averageScore,
+                interpretation: interpretation
+            };
+        }
+
+        function calculateStressResults() {
+            const totalScore = assessmentAnswers.reduce((sum, answer) => sum + (answer || 0), 0);
+            const maxScore = assessmentData.questions.length * 4;
+            const percentage = (totalScore / maxScore) * 100;
+
+            let level = '';
+            let interpretation = '';
+
+            if (percentage <= 30) {
+                level = 'low';
+                interpretation = "Your stress levels appear to be manageable. Keep up your current coping strategies!";
+            } else if (percentage <= 60) {
+                level = 'moderate';
+                interpretation = "You're experiencing moderate stress. Consider incorporating more stress-reduction techniques into your routine.";
+            } else if (percentage <= 80) {
+                level = 'high';
+                interpretation = "You're experiencing high stress levels. It might be helpful to talk to someone about what's causing this stress.";
+            } else {
+                level = 'very high';
+                interpretation = "Your stress levels are very high. Please consider reaching out to a mental health professional for support.";
+            }
+
+            return {
+                type: 'stress',
+                totalScore: totalScore,
+                percentage: percentage,
+                level: level,
+                interpretation: interpretation
+            };
+        }
+
+        function showAssessmentResults(results) {
+            const resultsContent = document.getElementById('results-content');
+            const interpretationText = document.getElementById('interpretation-text');
+
+            let html = '';
+            let interpretation = '';
+
+            if (results.type === 'dass21') {
+                html = `
+                    <div class="score-card">
+                        <div class="score-category">
+                            <div class="score-label">Depression Score</div>
+                            <div class="score-value">${results.depression.score}</div>
+                        </div>
+                        <div class="score-level level-${results.depression.level.replace(' ', '-')}">${results.depression.level.toUpperCase()}</div>
+                    </div>
+
+                    <div class="score-card">
+                        <div class="score-category">
+                            <div class="score-label">Anxiety Score</div>
+                            <div class="score-value">${results.anxiety.score}</div>
+                        </div>
+                        <div class="score-level level-${results.anxiety.level.replace(' ', '-')}">${results.anxiety.level.toUpperCase()}</div>
+                    </div>
+
+                    <div class="score-card">
+                        <div class="score-category">
+                            <div class="score-label">Stress Score</div>
+                            <div class="score-value">${results.stress.score}</div>
+                        </div>
+                        <div class="score-level level-${results.stress.level.replace(' ', '-')}">${results.stress.level.toUpperCase()}</div>
+                    </div>
+                `;
+
+                interpretation = "The DASS-21 is a widely used clinical assessment tool. Scores in the normal range suggest typical experiences of depression, anxiety, and stress. Higher scores may indicate areas where additional support could be beneficial. Remember, this is not a clinical diagnosis.";
+
+            } else if (results.type === 'mood') {
+                html = `
+                    <div class="score-card">
+                        <div class="score-category">
+                            <div class="score-label">Overall Mood Score</div>
+                            <div class="score-value">${results.averageScore.toFixed(1)}/5</div>
+                        </div>
+                    </div>
+                `;
+
+                interpretation = results.interpretation;
+
+            } else if (results.type === 'stress') {
+                html = `
+                    <div class="score-card">
+                        <div class="score-category">
+                            <div class="score-label">Stress Level</div>
+                            <div class="score-value">${results.level.toUpperCase()}</div>
+                        </div>
+                        <div class="score-category">
+                            <div class="score-label">Stress Percentage</div>
+                            <div class="score-value">${results.percentage.toFixed(0)}%</div>
+                        </div>
+                    </div>
+                `;
+
+                interpretation = results.interpretation;
+            }
+
+            resultsContent.innerHTML = html;
+            interpretationText.textContent = interpretation;
+
+            // Show results screen
+            showScreen('assessment-results');
+
+            // Update assessment context indicator in chat
+            updateAssessmentContextIndicator();
+        }
+
+        function chatAboutResults() {
+            // This will be handled by the main page's tab switching
+            if (window.parent && window.parent.switchTab) {
+                window.parent.switchTab('chat');
+                setTimeout(() => {
+                    if (window.parent.addMessage) {
+                        window.parent.addMessage("I've just completed a self-assessment and would like to discuss my results with you.", 'user', new Date().toISOString());
+                        // Trigger send message
+                        if (window.parent.sendMessage) {
+                            window.parent.sendMessage();
+                        }
+                    }
+                }, 500);
+            }
+        }
+
+        function getResources() {
+            // This will be handled by the main page's tab switching
+            if (window.parent && window.parent.switchTab) {
+                window.parent.switchTab('resources');
+            }
+        }
+
+        function retakeAssessment() {
+            showScreen('assessment-selection');
+        }
+
+        function updateAssessmentContextIndicator() {
+            // This will be handled by the parent window
+            if (window.parent && window.parent.updateAssessmentContextIndicator) {
+                window.parent.updateAssessmentContextIndicator();
+            }
+        }
+
+        // Listen for messages from chat to start specific assessments
+        window.addEventListener('message', function(event) {
+            if (event.data.type === 'start-assessment') {
+                const assessmentType = event.data.assessmentType;
+                if (['dass21', 'mood', 'stress'].includes(assessmentType)) {
+                    startAssessment(assessmentType);
+                }
+            }
+        });
+    </script>
+</body>
+</html>

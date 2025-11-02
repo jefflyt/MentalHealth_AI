@@ -18,29 +18,54 @@ def human_escalation_node(state: AgentState, llm: ChatGroq, get_relevant_context
     """RAG-enhanced human escalation with professional referrals."""
     
     print("\n" + "="*60)
-    print("🤝 [AGENT ACTIVATED: Human Escalation Agent]")
+    print("🤝 [AGENT ACTIVATED: Human Escalation Agent]") 
     print("="*60)
     
     query = state["current_query"]
+    external_context = state.get("context", "")  # Assessment results or other context
     
     # Get professional referral context
     referral_context = get_relevant_context(f"professional mental health referral Singapore complex cases {query}", n_results=3)
     
-    escalation_prompt = f"""
-    You are Sunny, a warm and caring digital friend who knows about mental health resources. Someone needs professional support.
+    # Check if this is an assessment suggestion rather than a crisis
+    if external_context and "ASSESSMENT_SUGGESTION" in external_context:
+        print("🎯 Including assessment suggestion context")
+        assessment_suggestion = True
+    else:
+        assessment_suggestion = False
     
-    Context about Singapore services: {referral_context}
-    User's situation: "{query}"
-    
-    As Sunny, respond with your caring, friend-like personality:
-    
-    1. Acknowledge their situation with genuine empathy - "I can really hear that..."
-    2. Gently suggest professional help as their supportive friend would
-    3. Recommend ONE specific service in Singapore that fits best
-    4. End with warm encouragement about taking this positive step
-    
-    Use Sunny's style: conversational, caring, like talking to a trusted friend who wants the best for you. Avoid clinical language or lists. Keep it warm and personal.
-    """
+    if assessment_suggestion:
+        escalation_prompt = f"""
+        You are Sunny, a warm and caring digital friend. The user has been giving vague responses and would benefit from a self-assessment.
+        
+        User's recent responses: "{query}"
+        Context: {external_context}
+        
+        As Sunny, respond with your caring personality:
+        
+        1. Gently acknowledge they seem to be going through something: "I notice you've been giving short responses..."
+        2. Suggest that a quick self-assessment might help them understand their feelings better
+        3. Mention specific options: DASS-21 for comprehensive screening, Quick Mood Check, or Stress Level Assessment
+        4. Be warm and encouraging - this could help you get more targeted support
+        
+        Keep it friendly and supportive, like a caring friend suggesting something helpful.
+        """
+    else:
+        escalation_prompt = f"""
+        You are Sunny, a warm and caring digital friend who knows about mental health resources. Someone needs professional support.
+        
+        Context about Singapore services: {referral_context}
+        User's situation: "{query}"
+        
+        As Sunny, respond with your caring, friend-like personality:
+        
+        1. Acknowledge their situation with genuine empathy - "I can really hear that..."
+        2. Gently suggest professional help as their supportive friend would
+        3. Recommend ONE specific service in Singapore that fits best
+        4. End with warm encouragement about taking this positive step
+        
+        Use Sunny's style: conversational, caring, like talking to a trusted friend who wants the best for you. Avoid clinical language or lists. Keep it warm and personal.
+        """
     
     try:
         response = llm.invoke(escalation_prompt).content

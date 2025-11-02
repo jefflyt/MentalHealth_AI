@@ -21,6 +21,7 @@ def information_agent_node(state: AgentState, llm: ChatGroq, get_relevant_contex
     query = state["current_query"]
     conversation_history = state.get("messages", [])
     distress_level = state.get("distress_level", "none")
+    external_context = state.get("context", "")  # Assessment results or other context
     
     # Load Sunny's persona components
     sunny = get_sunny_persona()
@@ -163,22 +164,49 @@ What's on your mind today?"""
     else:
         # Normal conversation - be friendly and supportive (VERY brief)
         print("💬 Sunny's casual conversation mode")
-        prompt = build_sunny_prompt(
-            agent_type='information',
-            context=f'User said: "{query}"',
-            specific_instructions=f"""If this is about mental health, wellbeing, or emotions: Respond as Sunny with warmth and support in 1-2 SHORT sentences using phrases like: {', '.join(sunny['validation_phrases'][:2])}
+        
+        # Build context including external context (assessment suggestions)
+        context_parts = [f'User said: "{query}"']
+        if external_context:
+            context_parts.append(external_context)
+            print("🎯 Including external context (assessment suggestion)")
+        
+        full_context = '\n\n'.join(context_parts)
+        
+        # Check if we're suggesting an assessment
+        is_assessment_suggestion = external_context and "ASSESSMENT_SUGGESTION" in external_context
+        
+        if is_assessment_suggestion:
+            prompt = build_sunny_prompt(
+                agent_type='information',
+                context=full_context,
+                specific_instructions=f"""The user has given several vague responses and might benefit from a self-assessment. Respond warmly as Sunny and suggest they try the self-assessment tool to better understand their mental health.
+
+{external_context}
+
+Be supportive and explain how the assessment could help them. End with encouraging them to click the Assessment tab or take the DASS-21 assessment.
+
+Your supportive response as Sunny:"""
+            )
+        else:
+            prompt = build_sunny_prompt(
+                agent_type='information',
+                context=full_context,
+                specific_instructions=f"""If this is about mental health, wellbeing, or emotions: Respond as Sunny with warmth and support in 1-2 SHORT sentences using phrases like: {', '.join(sunny['validation_phrases'][:2])}
 
 If this is NOT about mental health: Use Sunny's redirect: "{sunny['redirect_template']}"
 
 Your warm response as Sunny:"""
-        )
+            )
     
         try:
             response = llm.invoke(prompt).content.strip()
             
-            # VERY hard limit - max 2 sentences
-            sentences = [s.strip() for s in response.split('.') if s.strip()]
-            response = '. '.join(sentences[:2]) + '.' if sentences else "I'm here for you. What's on your mind?"
+            # Only apply hard limit for normal responses, not assessment suggestions
+            if not is_assessment_suggestion:
+                # VERY hard limit - max 2 sentences
+                sentences = [s.strip() for s in response.split('.') if s.strip()]
+                response = '. '.join(sentences[:2]) + '.' if sentences else "I'm here for you. What's on your mind?"
             
         except Exception as e:
             print(f"Information agent error: {e}")

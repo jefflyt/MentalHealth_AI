@@ -167,10 +167,51 @@ python --version
 
 ### Sample Conversations
 
-**General Query:**
+**🔴 HIGH Distress (immediate structured support):**
 ```
-You: I've been feeling stressed lately
-Bot: [Provides stress management info + coping strategies]
+You: i dont feel good
+Bot: I hear you, and I'm really glad you reached out to me. 💙
+It sounds like you're going through a really tough time right now...
+
+I can support you with:
+1️⃣ Understanding what you're feeling
+2️⃣ Coping strategies that can help right now
+3️⃣ Connecting you to professional support in Singapore
+4️⃣ Just being here to listen - whatever you need
+```
+
+**🟡 MODERATE Distress (warm support menu):**
+```
+You: I'm feeling really anxious
+Bot: Hey there, I'm Sunny, and I'm here for you. 💙
+I can help with whatever you're going through.
+
+I can help with:
+1️⃣ Understanding your feelings
+2️⃣ Coping strategies and techniques
+3️⃣ Finding support services in Singapore
+4️⃣ Just someone to talk to - I'm a good listener!
+```
+
+**🟢 MILD Distress (friendly welcome):**
+```
+You: i need help
+Bot: Hi there! I'm Sunny, and I'm here to support you. 💙 😊
+
+What would you like help with?
+• Understanding emotions
+• Coping strategies
+• Support services in Singapore
+• Or just talk - I'm a good listener!
+
+What's on your mind today?
+```
+
+**Assessment Suggestion (after vague responses):**
+```
+You: ok (repeated 2+ times)
+Bot: I hear you, and I'm here to support you. I've noticed you've given...
+[Longer response suggesting self-assessment with DASS-21 options]
 ```
 
 **Resource Request:**

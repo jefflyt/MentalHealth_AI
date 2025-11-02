@@ -38,6 +38,72 @@ print("✅ Agent system ready!")
 # Store conversation history (in production, use a database)
 conversations = {}
 
+def build_assessment_context(assessment_results):
+    """Build context string from assessment results for Sunny to use."""
+    if not assessment_results:
+        return ""
+    
+    assessment_type = assessment_results.get('assessmentType', 'unknown')
+    timestamp = assessment_results.get('timestamp', 'recently')
+    
+    context_parts = [f"User recently completed a {assessment_type} assessment on {timestamp[:10]}. Key findings:"]
+    
+    if assessment_type == 'dass21':
+        scores = assessment_results.get('scores', {})
+        for category, data in scores.items():
+            level = data.get('level', 'unknown')
+            score = data.get('score', 0)
+            context_parts.append(f"- {category.title()}: {level} level (score: {score})")
+    
+    elif assessment_type == 'mood':
+        avg_score = assessment_results.get('averageScore', 'unknown')
+        context_parts.append(f"- Overall mood score: {avg_score}/5.0")
+        
+    elif assessment_type == 'stress':
+        level = assessment_results.get('level', 'unknown')
+        percentage = assessment_results.get('percentage', 'unknown')
+        context_parts.append(f"- Stress level: {level} ({percentage}%)")
+    
+    context_parts.append("Please be empathetic and refer to these results when relevant. Don't mention specific scores unless the user asks directly.")
+    
+    return " ".join(context_parts)
+
+def is_vague_response(message):
+    """Check if user response is vague and lacks specific information."""
+    message_lower = message.lower().strip()
+    
+    # Single word vague responses
+    single_word_vague = [
+        'ok', 'okay', 'okie', 'yes', 'no', 'maybe', 'sure', 'fine', 'good', 'bad',
+        'yeah', 'yep', 'nah', 'whatever', 'nothing', 'dunno', 'idk', 'hmm', 'um', 'uh'
+    ]
+    
+    if message_lower in single_word_vague:
+        return True
+    
+    # Short vague responses (under 15 characters)
+    if len(message_lower) < 15:
+        vague_patterns = [
+            'i guess', 'not sure', 'don\'t know', 'nothing much', 'not really',
+            'kinda', 'sorta', 'meh', 'blah', 'eh', 'alright', 'decent'
+        ]
+        return any(pattern in message_lower for pattern in vague_patterns)
+    
+    # Longer vague responses
+    vague_indicators = [
+        'i don\'t know', 'not sure', 'maybe', 'i guess', 'whatever',
+        'nothing specific', 'just feeling', 'kind of', 'sort of',
+        'not really sure', 'hard to explain', 'can\'t say', 'don\'t feel like',
+        'everything', 'stuff', 'things', 'just tired',
+        'just stressed', 'just sad', 'just okay', 'just fine'
+    ]
+    
+    # Check if message contains vague indicators
+    vague_count = sum(1 for indicator in vague_indicators if indicator in message_lower)
+    
+    # Consider it vague if it has vague indicators and is relatively short
+    return vague_count > 0 and len(message_lower) < 50
+
 @app.route('/')
 def index():
     """Main chat interface."""
@@ -72,13 +138,56 @@ def chat():
             'timestamp': datetime.now().isoformat()
         })
         
+        # Track vague responses for assessment suggestion
+        if 'vague_response_count' not in session:
+            session['vague_response_count'] = 0
+        
+        # Check if user response is vague or if they explicitly request assessment
+        if user_message.lower().strip() == "suggest assessment":
+            # Manual trigger for testing
+            session['vague_response_count'] = 2
+        elif is_vague_response(user_message):
+            session['vague_response_count'] += 1
+        else:
+            session['vague_response_count'] = 0  # Reset on meaningful response
+        
+        # Build context with assessment results if available
+        context = ""
+        if 'assessment_results' in session:
+            assessment = session['assessment_results']
+            context = build_assessment_context(assessment)
+            print(f"🧠 Assessment context added: {assessment.get('assessmentType', 'unknown')}")
+        
+        # Add assessment suggestion context if user has been vague
+        suggest_assessment = False
+        if session['vague_response_count'] >= 2:
+            # For testing: suggest assessment even if there are recent results
+            # In production, you might want to check for older results only
+            suggest_assessment = True
+        
+        if suggest_assessment:
+            # Make assessment suggestion the primary context, not secondary
+            assessment_suggestion = "ASSESSMENT_SUGGESTION: The user has given vague responses. Gently suggest they take a self-assessment to better understand their mental state and provide more targeted support. Mention specific assessment options: DASS-21 for comprehensive screening, Quick Mood Check, or Stress Level Assessment."
+            
+            # Put assessment suggestion first if we have one
+            if context:
+                context = assessment_suggestion + " " + context
+            else:
+                context = assessment_suggestion
+        
+        # Debug logging
+        print(f"🎯 Vague response count: {session['vague_response_count']}")
+        print(f"🧠 Has assessment results: {'assessment_results' in session}")
+        print(f"💡 Suggesting assessment: {suggest_assessment}")
+
+        
         # Create initial state for the agent
         initial_state = AgentState(
             current_query=user_message,
             messages=[],
             current_agent="",
             crisis_detected=False,
-            context="",
+            context=context,
             distress_level="none"
         )
         
@@ -129,6 +238,15 @@ def new_conversation():
         session['session_id'] = new_session_id
         conversations[new_session_id] = []
         
+        # Clear assessment results and vague response counter when starting new conversation
+        if 'assessment_results' in session:
+            del session['assessment_results']
+            print("🧠 Cleared assessment results for new conversation")
+        
+        if 'vague_response_count' in session:
+            del session['vague_response_count']
+            print("🔄 Reset vague response counter for new conversation")
+        
         # Force reload of agent modules by clearing cache
         print("\n🔄 Reloading agent modules...")
         
@@ -169,6 +287,10 @@ def new_conversation():
         new_session_id = str(uuid.uuid4())
         session['session_id'] = new_session_id
         conversations[new_session_id] = []
+        
+        # Clear assessment results even if reload fails
+        if 'assessment_results' in session:
+            del session['assessment_results']
         
         return jsonify({
             'message': 'New conversation started',
@@ -298,9 +420,106 @@ def get_tool(tool_name):
             'error': 'An error occurred loading the tool'
         }), 500
 
-@app.route('/resources', methods=['GET'])
+@app.route('/store-assessment-results', methods=['POST'])
+def store_assessment_results():
+    """Store assessment results in session for Sunny's context."""
+    try:
+        data = request.get_json()
+        
+        if not data:
+            return jsonify({'error': 'No assessment data provided'}), 400
+        
+        # Store results in session
+        session['assessment_results'] = data
+        
+        # Reset vague response counter when new assessment is completed
+        session['vague_response_count'] = 0
+        
+        print(f"🧠 Stored {data.get('assessmentType', 'unknown')} assessment results for session")
+        
+        # Generate proactive conversation starter based on results
+        conversation_starter = generate_assessment_conversation_starter(data)
+        
+        return jsonify({
+            'success': True,
+            'message': 'Assessment results stored successfully',
+            'conversation_starter': conversation_starter,
+            'timestamp': datetime.now().isoformat()
+        })
+        
+    except Exception as e:
+        print(f"Error storing assessment results: {e}")
+        return jsonify({
+            'error': 'An error occurred storing assessment results'
+        }), 500
+
+def generate_assessment_conversation_starter(assessment_data):
+    """Generate a proactive conversation starter based on assessment results."""
+    assessment_type = assessment_data.get('assessmentType', 'assessment')
+    
+    if assessment_type == 'dass21':
+        # Check for highest concern areas
+        depression_level = assessment_data.get('depression', {}).get('level', 'normal')
+        anxiety_level = assessment_data.get('anxiety', {}).get('level', 'normal')
+        stress_level = assessment_data.get('stress', {}).get('level', 'normal')
+        
+        concerns = []
+        if depression_level not in ['normal', 'minimal']:
+            concerns.append('depression')
+        if anxiety_level not in ['normal', 'minimal']:
+            concerns.append('anxiety')
+        if stress_level not in ['normal', 'minimal']:
+            concerns.append('stress')
+        
+        if concerns:
+            concern_text = ', '.join(concerns[:-1]) + (' and ' + concerns[-1] if len(concerns) > 1 else concerns[0])
+            return f"Hi! I see you've completed the DASS-21 assessment and it shows some elevated {concern_text} levels. I'm here to support you - would you like to talk about what's been on your mind lately? 💙"
+        else:
+            return "Hi! Thanks for completing the DASS-21 assessment. It's great that your scores are in healthy ranges! I'm still here if you'd like to chat about anything on your mind. How are you feeling today? 😊"
+    
+    elif assessment_type == 'mood':
+        avg_score = assessment_data.get('averageScore', 2.5)
+        if avg_score < 2.0:
+            return "Hi! I noticed from your mood check that you might be going through a tough time right now. I'm here to listen and support you. What's been weighing on your heart lately? 💙"
+        elif avg_score < 3.0:
+            return "Hi! Your mood check shows you're managing but there might be some challenges. I'm here to chat about whatever's on your mind. How has your day been? 💜"
+        else:
+            return "Hi! I'm glad to see from your mood check that you're doing well! I'm here if you'd like to share what's been going right for you, or if there's anything else you'd like to talk about. 😊"
+    
+    elif assessment_type == 'stress':
+        stress_level = assessment_data.get('level', 'moderate')
+        if stress_level in ['high', 'very high']:
+            return "Hi! Your stress assessment shows you're dealing with quite a bit of stress right now. That must feel overwhelming. I'm here to help - would you like to talk about what's been most stressful for you lately? 💙"
+        elif stress_level == 'moderate':
+            return "Hi! I see you're experiencing some stress from your assessment. That's completely normal, and I'm here to support you. What's been on your mind that's causing you stress? 💜"
+        else:
+            return "Hi! It's wonderful that your stress levels are manageable right now! I'm here if you'd like to share what's been helping you stay balanced, or if there's anything else you'd like to discuss. 😊"
+    
+    return "Hi! Thanks for completing the assessment. I'm here to support you based on your results. How are you feeling right now? 💙"
+
+@app.route('/get-conversation-starter', methods=['GET'])
+def get_conversation_starter():
+    """Get a conversation starter based on assessment results."""
+    try:
+        if 'assessment_results' not in session:
+            return jsonify({'has_starter': False})
+        
+        assessment_data = session['assessment_results']
+        conversation_starter = generate_assessment_conversation_starter(assessment_data)
+        
+        return jsonify({
+            'has_starter': True,
+            'message': conversation_starter,
+            'assessment_type': assessment_data.get('assessmentType', 'assessment')
+        })
+        
+    except Exception as e:
+        print(f"Error getting conversation starter: {e}")
+        return jsonify({'has_starter': False})
+
+@app.route('/api/resources', methods=['GET'])
 def get_resources():
-    """Get organized mental health resources."""
+    """Get organized mental health resources API endpoint."""
     try:
         resources = {
             'emergency': [
@@ -359,6 +578,26 @@ def get_resources():
         return jsonify({
             'error': 'An error occurred loading resources'
         }), 500
+
+@app.route('/chat', methods=['GET'])
+def chat_page():
+    """Serve the chat interface template."""
+    return render_template('chat.html')
+
+@app.route('/assessment', methods=['GET'])
+def assessment_page():
+    """Serve the assessment interface template."""
+    return render_template('assessment.html')
+
+@app.route('/resources', methods=['GET'])
+def resources_page():
+    """Serve the resources interface template."""
+    return render_template('resources.html')
+
+@app.route('/tools', methods=['GET'])
+def tools_page():
+    """Serve the tools interface template."""
+    return render_template('tools.html')
 
 if __name__ == '__main__':
     # Run the Flask app
