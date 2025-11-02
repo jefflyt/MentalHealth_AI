@@ -16,6 +16,11 @@ class AgentState(TypedDict):
 
 def crisis_intervention_node(state: AgentState, llm: ChatGroq, get_relevant_context) -> AgentState:
     """RAG-enhanced crisis intervention with relevant protocols."""
+    
+    print("\n" + "="*60)
+    print("🚨 [AGENT ACTIVATED: Crisis Intervention Agent]")
+    print("="*60)
+    
     query = state["current_query"]
     
     # Get crisis intervention context

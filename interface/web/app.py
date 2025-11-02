@@ -4,8 +4,11 @@ Flask Web Interface for AI Mental Health Support Agent
 Provides a user-friendly web GUI for interacting with the multi-agent system
 """
 
-from flask import Flask, render_template, request, jsonify, session
 import os
+# Disable tokenizers parallelism warning for forked processes
+os.environ["TOKENIZERS_PARALLELISM"] = "false"
+
+from flask import Flask, render_template, request, jsonify, session
 import sys
 from datetime import datetime
 from dotenv import load_dotenv
@@ -75,7 +78,8 @@ def chat():
             messages=[],
             current_agent="",
             crisis_detected=False,
-            context=""
+            context="",
+            distress_level="none"
         )
         
         # Run the workflow

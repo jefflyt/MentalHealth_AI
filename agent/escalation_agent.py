@@ -16,6 +16,11 @@ class AgentState(TypedDict):
 
 def human_escalation_node(state: AgentState, llm: ChatGroq, get_relevant_context) -> AgentState:
     """RAG-enhanced human escalation with professional referrals."""
+    
+    print("\n" + "="*60)
+    print("🤝 [AGENT ACTIVATED: Human Escalation Agent]")
+    print("="*60)
+    
     query = state["current_query"]
     
     # Get professional referral context

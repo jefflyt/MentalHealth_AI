@@ -5,6 +5,9 @@ A multi-agent system using LangGraph and ChromaDB for knowledge-grounded respons
 """
 
 import os
+# Disable tokenizers parallelism warning for forked processes
+os.environ["TOKENIZERS_PARALLELISM"] = "false"
+
 import chromadb
 from chromadb.utils import embedding_functions
 from langgraph.graph import StateGraph, END
@@ -35,6 +38,7 @@ class AgentState(TypedDict):
     current_agent: str
     crisis_detected: bool
     context: str  # Added for RAG context
+    distress_level: str  # 'high', 'moderate', 'mild', or 'none'
 
 # Initialize Groq LLM
 def get_llm():
@@ -295,7 +299,8 @@ def main():
                 "messages": [],
                 "current_agent": "",
                 "crisis_detected": False,
-                "context": ""
+                "context": "",
+                "distress_level": "none"
             }
             
             # Run the workflow with RAG

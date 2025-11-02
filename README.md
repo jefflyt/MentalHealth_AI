@@ -19,7 +19,10 @@ User Browser (http://localhost:5001)
     ↓
 Flask Web Interface
     ↓
-Agent Router → [Crisis|Info|Resource|Assessment|Escalation]
+Agent Router (3-Level Priority System)
+    ├── Priority 1: Crisis Keywords → Crisis Agent
+    ├── Priority 2: Distress Detection → Information Agent (Menu: 1-4)
+    └── Priority 3: LLM Routing → [Resource|Assessment|Escalation]
     ↓
 ChromaDB RAG (168 chunks from 13 files)
     ↓
@@ -27,6 +30,34 @@ Groq LLM (Llama 3.3 70B)
     ↓
 Response with Singapore Resources
 ```
+
+### Routing Logic:
+
+1. **🚨 Crisis Detection** (Highest Priority)
+   - Keywords: suicide, self-harm, want to die, etc.
+   - Routes to: **Crisis Agent** (immediate support)
+
+2. **😔 Distress Level Detection** (Medium Priority)
+   - **3-Level System**: HIGH 🔴 / MODERATE 🟡 / MILD 🟢
+   - Routes to: **Information Agent** (tailored response based on distress level)
+   
+   **🔴 HIGH Distress Examples:**
+   - "i dont feel good", "can't cope", "overwhelmed", "breaking down"
+   - Response: Immediate empathy + supportive menu with emphasis on urgent help
+   
+   **🟡 MODERATE Distress Examples:**
+   - "feeling sad", "struggling", "hard time", "anxious", "depressed"
+   - Response: Warm acknowledgment + standard numbered menu (1-4)
+   
+   **🟢 MILD Distress Examples:**
+   - "i need help", "confused", "not sure", "need someone to talk to"
+   - Response: Welcoming, open-ended invitation + bullet-point options
+
+3. **🎯 Specific Requests** (Standard Routing)
+   - Uses LLM to intelligently route to specialized agents
+   - Resource Agent: Singapore services
+   - Assessment Agent: DASS-21 screening
+   - Escalation Agent: Professional referrals
 
 ## 📁 Project Structure
 
@@ -68,31 +99,21 @@ MentalHealth_AI/
     └── GUIDE.md                # Complete technical guide
 ```
 
-## 🚀 Quick Start
-
-See **[QUICKSTART.md](QUICKSTART.md)** for detailed setup instructions.
-
-**TL;DR:**
-```bash
-# 1. Install dependencies
-pip install -r requirements.txt
-
-# 2. Add API key to .env
-echo "GROQ_API_KEY=your_key_here" > .env
-
-# 3. Start web interface
-python run_web.py
-
-# 4. Open browser
-# http://localhost:5001
-```
-
 ## ✨ Key Features
 
 ### 🤖 Multi-Agent System
-- **Router Agent**: Intelligently routes queries to specialists
+- **Router Agent**: Intelligently routes queries with 3-level priority system
+  - 🚨 **Priority 1**: Crisis detection (suicide, self-harm) → Crisis Agent
+  - 😔 **Priority 2**: Distress level detection (HIGH/MODERATE/MILD) → Information Agent
+    - **HIGH 🔴**: Immediate empathy ("i dont feel good", "can't cope")
+    - **MODERATE 🟡**: Warm support ("feeling sad", "struggling")
+    - **MILD 🟢**: Friendly welcome ("i need help", "confused")
+  - 🎯 **Priority 3**: Specific requests (services, assessment) → Specialized agents
 - **Crisis Agent**: Immediate support for emergencies (24/7 contacts)
-- **Information Agent**: Evidence-based mental health education
+- **Information Agent**: Evidence-based mental health education with adaptive responses
+  - Tailors empathy level to detected distress (HIGH/MODERATE/MILD)
+  - Provides numbered menu (1-4) or bullet points based on intensity
+  - Handles coping strategies, understanding feelings, and general support
 - **Resource Agent**: Singapore mental health services (CHAT, IMH)
 - **Assessment Agent**: DASS-21 screening guidance
 - **Escalation Agent**: Professional referral recommendations
@@ -131,15 +152,34 @@ python run_web.py
 ## 📊 System Stats
 
 - **Total Lines**: ~1,500
-- **Agent Modules**: 8 files (788 lines)
+- **Agent Modules**: 7 files (coping agent removed - redundant)
 - **Core System**: 315 lines
 - **Web Interface**: 300+ lines
 - **Knowledge Base**: 13 files, 168 chunks
 - **Response Time**: <2s with RAG
+- **Distress Detection**: 3-level system (HIGH/MODERATE/MILD) with 40+ patterns
 
 ## 🧪 Sample Queries
 
 Try these in the web interface:
+
+**🔴 HIGH Distress (triggers immediate empathy):**
+- "i dont feel good"
+- "I can't cope anymore"
+- "I'm overwhelmed"
+- "feel terrible"
+
+**🟡 MODERATE Distress (triggers warm support):**
+- "I'm struggling"
+- "feeling sad"
+- "feeling anxious"
+- "having a hard time"
+
+**🟢 MILD Distress (triggers friendly welcome):**
+- "i need help"
+- "confused about my feelings"
+- "not sure what to do"
+- "need someone to talk to"
 
 **General Information:**
 - "I'm feeling anxious lately"
@@ -167,9 +207,14 @@ Try these in the web interface:
 
 ## 📖 Documentation
 
-- **[QUICKSTART.md](QUICKSTART.md)** - Setup and run guide (START HERE!)
-- **[GUIDE.md](GUIDE.md)** - Complete technical guide (agents, deployment, customization)
-- **README.md** - This file (overview and structure)
+- **[QUICKSTART.md](QUICKSTART.md)** - Setup and run guide (5 minutes - START HERE!)
+- **[GUIDE.md](GUIDE.md)** - Complete technical guide
+  - Agent architecture and routing logic
+  - Web interface setup and customization
+  - Knowledge base management (manual + web scraping)
+  - Deployment options and best practices
+  - API reference and troubleshooting
+- **[README.md](README.md)** - This file (project overview)
 
 ## 🔐 Security & Safety
 
@@ -224,7 +269,7 @@ Always consult qualified mental health professionals for clinical care.
 
 ## 🎯 Version
 
-**v2.1** - Modular architecture with web interface and smart updates
+**v2.2** - Enhanced distress detection with 3-level response system (HIGH/MODERATE/MILD)
 
 ---
 

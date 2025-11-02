@@ -522,6 +522,160 @@ Benefits:
 - Counts total chunks
 - Enables incremental updates
 
+### 3.7 Web Scraping for Knowledge Updates
+
+**File:** `web_scraper.py` (231 lines)
+
+**Purpose:** Fetch mental health content from trusted websites
+
+**Trusted Sources:**
+- **WHO** (World Health Organization) - Mental health fact sheets
+- **IMH** (Institute of Mental Health Singapore) - Local resources
+- **HealthHub Singapore** - Government health portal
+- **SAMH** (Singapore Association for Mental Health) - Community support
+
+**Features:**
+- Rate limiting (2-second delays between requests)
+- Content validation (minimum 200 characters)
+- Metadata headers (source, URL, timestamp)
+- Error handling and logging
+- Organized output by source
+
+**Usage:**
+
+```bash
+# Scrape all sources
+python web_scraper.py
+
+# Scrape specific sources programmatically
+python -c "from web_scraper import MentalHealthWebScraper; \
+           MentalHealthWebScraper().scrape_all(['who', 'imh'])"
+```
+
+**Output Structure:**
+```
+data/knowledge/web_sources/
+├── who/
+│   └── who_9aff9bcb.txt
+├── imh/
+│   └── imh_642d7702.txt
+├── healthhub/
+│   └── healthhub_7f114058.txt
+└── samh/
+    └── samh_4272ef94.txt
+```
+
+**Adding New Sources:**
+
+Edit `web_scraper.py`:
+```python
+TRUSTED_SOURCES = {
+    'new_source': {
+        'name': 'Source Name',
+        'base_url': 'https://example.com',
+        'pages': ['/mental-health'],
+        'selectors': {'content': 'article, main'}
+    }
+}
+```
+
+### 3.8 Periodic Updates
+
+**File:** `periodic_updater.py` (184 lines)
+
+**Purpose:** Automated knowledge base updates on schedule
+
+**Features:**
+- Combines web scraping + ChromaDB updates
+- Scheduled updates (daily/weekly/monthly)
+- Activity logging to `data/update_log.txt`
+- Manual or daemon mode
+- Error handling and recovery
+
+**Usage:**
+
+```bash
+# Manual one-time update
+python periodic_updater.py
+python periodic_updater.py manual
+
+# Scheduled updates (keeps running)
+python periodic_updater.py schedule --frequency weekly
+python periodic_updater.py schedule --frequency daily
+python periodic_updater.py schedule --frequency monthly
+```
+
+**Schedule Options:**
+- **daily**: Runs every day at 2:00 AM
+- **weekly**: Runs every Sunday at 2:00 AM
+- **monthly**: Runs on 1st of each month at 2:00 AM
+
+**Running in Background (macOS/Linux):**
+```bash
+# Using nohup
+nohup python periodic_updater.py schedule --frequency weekly > update.log 2>&1 &
+
+# Using screen
+screen -dmS knowledge-updater python periodic_updater.py schedule
+```
+
+**macOS LaunchAgent Setup:**
+
+Create `~/Library/LaunchAgents/com.mentalhealth.updater.plist`:
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" 
+    "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.mentalhealth.updater</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>/path/to/venv/bin/python</string>
+        <string>/path/to/periodic_updater.py</string>
+        <string>manual</string>
+    </array>
+    <key>StartCalendarInterval</key>
+    <dict>
+        <key>Weekday</key>
+        <integer>0</integer>
+        <key>Hour</key>
+        <integer>2</integer>
+        <key>Minute</key>
+        <integer>0</integer>
+    </dict>
+    <key>WorkingDirectory</key>
+    <string>/path/to/MentalHealth_AI</string>
+</dict>
+</plist>
+```
+
+Load: `launchctl load ~/Library/LaunchAgents/com.mentalhealth.updater.plist`
+
+### 3.9 Complete Update Workflow
+
+**Manual Update:**
+```bash
+# Step 1: Scrape web sources
+python web_scraper.py
+
+# Step 2: Update ChromaDB
+python -c "from agent import UpdateAgent; UpdateAgent().perform_smart_update()"
+
+# Step 3: Verify
+python agent/update_agent.py status
+```
+
+**Automated Update:**
+```bash
+# One-time (scraping + updating)
+python periodic_updater.py manual
+
+# Scheduled weekly updates
+python periodic_updater.py schedule --frequency weekly
+```
+
 ---
 
 ## 4. Deployment

@@ -19,6 +19,11 @@ def resource_agent_node(state: AgentState, llm: ChatGroq, get_relevant_context) 
     query = state["current_query"]
     conversation_history = state.get("messages", [])
     
+    print("\n" + "="*60)
+    print("🏥 [RESOURCE AGENT ACTIVATED]")
+    print(f"📝 Query: {query}")
+    print("="*60)
+    
     # Detect if asking about specific services
     services = {
         'chat': 'CHAT services',
@@ -33,63 +38,141 @@ def resource_agent_node(state: AgentState, llm: ChatGroq, get_relevant_context) 
     for keyword, service in services.items():
         if keyword in query.lower():
             specific_service = service
+            print(f"🔍 Detected specific service: {specific_service}")
             break
     
-    # Check if asking what help is available
-    asking_options = any(word in query.lower() for word in ['what', 'where', 'help', 'support', 'available', 'options'])
+    # Check if asking what help is available or general help request
+    asking_options = any(word in query.lower() for word in ['what', 'where', 'help', 'support', 'available', 'options', 'need'])
+    
+    if asking_options:
+        print("📋 User asking for available options")
+    
+    # If just general "help" or "need help" - show warm, complete response
+    if asking_options and not specific_service:
+        print("💙 Showing warm support message with resources")
+        response = """I'm here to support you. 💙
+
+**Immediate Help in Singapore:**
+
+📞 **SOS Hotline: 1767** (24/7, free)
+   - Talk to someone anytime
+
+🏥 **IMH Helpline: 6389-2222** (24/7)
+   - Institute of Mental Health
+
+💬 **CHAT: 6493-6500** (Ages 16-30)
+   - Free mental health check & support
+
+What would you like to know more about?"""
+        
+        state["messages"].append(response)
+        state["current_agent"] = "complete"
+        return state
     
     if specific_service:
-        # STEP 3: Provide specific service info
-        resource_context = get_relevant_context(f"Singapore {specific_service}", n_results=2)
+        # Provide specific service info with pre-written, warm responses
+        print(f"💡 Providing specific info about: {specific_service}")
         
-        prompt = f"""User asked about: "{query}"
+        # Pre-written responses for common services (warm and complete)
+        service_responses = {
+            'CHAT services': """**CHAT (Community Health Assessment Team)** 💙
 
-Singapore Services Info:
+For young people ages 16-30 in Singapore:
+
+📞 **Call: 6493-6500**
+📍 **Walk-in: *SCAPE, Orchard Link**
+🕐 **Hours:**
+   - Mon-Fri: 1 PM - 9 PM
+   - Sat: 10 AM - 4 PM
+
+**Free Services:**
+✓ Mental health screening
+✓ Brief counseling
+✓ Referrals to specialists
+
+You're not alone. They're here to help.""",
+
+            'IMH services': """**Institute of Mental Health (IMH)** 🏥
+
+Singapore's specialist psychiatric hospital:
+
+📞 **24/7 Helpline: 6389-2222**
+🚨 **Emergency: 6389-2222**
+📍 **Location: Buangkok Green Medical Park**
+
+**Services:**
+✓ Psychiatric care
+✓ Counseling
+✓ Crisis intervention
+✓ Inpatient & outpatient care
+
+Professional help is available anytime.""",
+
+            'crisis hotlines': """**Crisis Hotlines in Singapore** 📞
+
+**Always Available (24/7):**
+
+📞 **SOS: 1767** (Free, confidential)
+   - Emotional support anytime
+
+📞 **IMH: 6389-2222**
+   - Mental health emergency
+
+🚨 **Emergency: 999 or 995**
+   - Life-threatening situations
+
+You don't have to face this alone. Please reach out."""
+        }
+        
+        # Use pre-written response if available, otherwise generate
+        if specific_service in service_responses:
+            response = service_responses[specific_service]
+        else:
+            resource_context = get_relevant_context(f"Singapore {specific_service}", n_results=1)
+            
+            prompt = f"""User needs {specific_service} in Singapore. Be warm and supportive.
+
 {resource_context}
 
-Give specific, actionable info about {specific_service} in Singapore. Include contact details. 2-3 sentences max.
+Provide:
+• Service name with emoji
+• Contact number (clean, no asterisks)
+• 1-2 key points
+• Supportive closing
+
+Keep it human and warm.
 
 Response:"""
+            
+            try:
+                response = llm.invoke(prompt).content.strip()
+            except Exception as e:
+                print(f"LLM error: {e}")
+                response = f"I can help you find {specific_service}. Let me know if you need specific contact information."
+        
+        state["messages"].append(response)
+        state["current_agent"] = "complete"
+        return state
         
     elif asking_options and len(conversation_history) > 0:
-        # STEP 2: Show available services
-        prompt = f"""User asked: "{query}"
+        # Show available services (CLEAN LIST)
+        print("📋 Showing service list")
+        response = """**Mental Health Support in Singapore:** 💙
 
-List Singapore mental health support options briefly:
+🔹 **SOS: 1767** - 24/7 emotional support
+🔹 **CHAT: 6493-6500** - Youth (16-30)
+🔹 **IMH: 6389-2222** - Professional care
 
-"Here's what's available in Singapore:
-• CHAT - Free youth mental health service
-• IMH - Professional psychiatric care
-• Counseling services at polyclinics
-• 24/7 hotlines (SOS: 1767)
-
-Which would you like to know more about?"
-
-Say this naturally in 2-3 sentences:"""
+Which would you like to know more about?"""
+        
+        state["messages"].append(response)
+        state["current_agent"] = "complete"
+        return state
         
     else:
-        # STEP 1 & 4: Ask for details
-        prompt = f"""User said: "{query}"
-
-Ask what kind of support they're looking for. Be friendly and brief. 1-2 sentences.
-
-Examples:
-"I can help you find support in Singapore. What are you looking for - counseling, crisis support, or something else?"
-"Sure! What kind of help do you need right now?"
-
-Respond in 1-2 sentences:"""
-    
-    try:
-        response = llm.invoke(prompt).content
-        
-        # Limit length
-        sentences = response.split('. ')
-        if len(sentences) > 4:
-            response = '. '.join(sentences[:4]) + '.'
-        
-    except Exception as e:
-        print(f"Resource agent error: {e}")
-        response = "I can help you find resources in Singapore. What kind of support are you looking for?"
+        # Ask for details (BRIEF and WARM)
+        print("💬 Asking user for more details")
+        response = "I can help you find support in Singapore. What kind of help are you looking for? 💙"
     
     state["messages"].append(response)
     state["current_agent"] = "complete"

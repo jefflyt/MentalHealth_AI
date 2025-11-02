@@ -16,6 +16,11 @@ class AgentState(TypedDict):
 
 def assessment_agent_node(state: AgentState, llm: ChatGroq, get_relevant_context) -> AgentState:
     """RAG-enhanced assessment agent with DASS-21 protocols."""
+    
+    print("\n" + "="*60)
+    print("📊 [AGENT ACTIVATED: Assessment Agent]")
+    print("="*60)
+    
     query = state["current_query"]
     
     # Get DASS-21 and assessment context
