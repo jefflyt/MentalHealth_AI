@@ -191,34 +191,10 @@ Your warm, helpful tip:"""
         
         full_context = '\n\n'.join(context_parts)
         
-        # Check if we're suggesting an assessment OR have assessment results to discuss
+        # Check if we're suggesting an assessment
         is_assessment_suggestion = external_context and "ASSESSMENT_SUGGESTION" in external_context
-        has_assessment_results = external_context and "assessment" in external_context.lower() and "findings:" in external_context
         
-        if has_assessment_results and not is_assessment_suggestion:
-            # User has assessment results - provide overview and suggestions
-            prompt = build_sunny_prompt(
-                agent_type='information',
-                context=full_context,
-                specific_instructions=f"""The user has recently completed an assessment and is now chatting with you. Based on their results, provide:
-
-1. A warm greeting acknowledging they completed the assessment
-2. A simple, empathetic overview of their results (be gentle, not clinical)
-3. 2-3 practical suggestions based on their results
-4. Reassurance and offer to talk more about specific areas
-
-Assessment context: {external_context}
-
-Guidelines:
-- Be warm and supportive, not clinical
-- Don't repeat exact scores unless relevant
-- Focus on what they can do to feel better
-- Acknowledge their courage in taking the assessment
-- Keep it conversational and caring
-
-Your supportive response as Sunny:"""
-            )
-        elif is_assessment_suggestion:
+        if is_assessment_suggestion:
             prompt = build_sunny_prompt(
                 agent_type='information',
                 context=full_context,
@@ -244,9 +220,9 @@ Your warm response as Sunny:"""
         try:
             response = llm.invoke(prompt).content.strip()
             
-            # Only apply hard limit for normal responses, not assessment responses or suggestions
-            if not is_assessment_suggestion and not has_assessment_results:
-                # VERY hard limit - max 2 sentences for casual conversation
+            # Only apply hard limit for normal responses, not assessment suggestions
+            if not is_assessment_suggestion:
+                # VERY hard limit - max 2 sentences
                 sentences = [s.strip() for s in response.split('.') if s.strip()]
                 response = '. '.join(sentences[:2]) + '.' if sentences else "I'm here for you. What's on your mind?"
             

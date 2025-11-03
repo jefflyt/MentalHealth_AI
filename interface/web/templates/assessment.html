@@ -766,6 +766,14 @@
                 console.error('Error storing assessment results:', error);
             }
 
+            // Notify parent window that assessment results are updated
+            if (window.parent) {
+                window.parent.postMessage({
+                    type: 'assessment-results-updated',
+                    results: sessionAssessmentResults
+                }, '*');
+            }
+
             // Show results
             showAssessmentResults(results);
         }

@@ -50,58 +50,21 @@ def build_assessment_context(assessment_results):
     
     if assessment_type == 'dass21':
         scores = assessment_results.get('scores', {})
-        elevated_areas = []
-        normal_areas = []
-        
         for category, data in scores.items():
             level = data.get('level', 'unknown')
             score = data.get('score', 0)
             context_parts.append(f"- {category.title()}: {level} level (score: {score})")
-            
-            if level not in ['normal', 'minimal']:
-                elevated_areas.append(category)
-            else:
-                normal_areas.append(category)
-        
-        # Add suggestions based on results
-        if elevated_areas:
-            context_parts.append(f"\nElevated areas needing support: {', '.join(elevated_areas)}")
-            context_parts.append("Suggestions to offer:")
-            
-            if 'depression' in elevated_areas:
-                context_parts.append("- Depression: Suggest gentle activities, social connection, and professional support if needed")
-            if 'anxiety' in elevated_areas:
-                context_parts.append("- Anxiety: Recommend breathing exercises, grounding techniques, and mindfulness")
-            if 'stress' in elevated_areas:
-                context_parts.append("- Stress: Suggest time management, relaxation techniques, and boundary setting")
-        
-        if normal_areas:
-            context_parts.append(f"\nStrengths/healthy areas: {', '.join(normal_areas)}")
     
     elif assessment_type == 'mood':
         avg_score = assessment_results.get('averageScore', 'unknown')
         context_parts.append(f"- Overall mood score: {avg_score}/5.0")
         
-        if float(avg_score) < 2.0:
-            context_parts.append("Suggestions: Focus on basic self-care, gentle activities, and emotional support")
-        elif float(avg_score) < 3.0:
-            context_parts.append("Suggestions: Mood-boosting activities, social connection, and stress reduction")
-        else:
-            context_parts.append("Suggestions: Maintain positive habits and continue what's working")
-        
     elif assessment_type == 'stress':
         level = assessment_results.get('level', 'unknown')
         percentage = assessment_results.get('percentage', 'unknown')
         context_parts.append(f"- Stress level: {level} ({percentage}%)")
-        
-        if level in ['high', 'very high']:
-            context_parts.append("Suggestions: Urgent stress management, breathing exercises, and time management")
-        elif level == 'moderate':
-            context_parts.append("Suggestions: Regular stress-relief practices and boundary setting")
-        else:
-            context_parts.append("Suggestions: Continue current stress management and prevention strategies")
     
-    context_parts.append("\nInstructions for Sunny: Be empathetic and acknowledge their courage in taking the assessment. Provide a gentle overview and practical suggestions. Don't mention specific scores unless relevant.")
+    context_parts.append("Please be empathetic and refer to these results when relevant. Don't mention specific scores unless the user asks directly.")
     
     return " ".join(context_parts)
 
