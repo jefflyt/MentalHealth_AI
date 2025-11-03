@@ -6,9 +6,10 @@ from typing import TypedDict, List
 from langchain_groq import ChatGroq
 
 
-# Define distress keyword dictionaries as module-level constants
-# High distress keywords (weight: 5) - severe emotional/physical suffering
+# Define distress keyword dictionaries - SIMPLIFIED 2-LEVEL SYSTEM
+# High distress keywords (weight: 5) - severe emotional crisis, immediate empathy needed
 HIGH_DISTRESS_KEYWORDS = {
+    # Crisis-level emotional states
     "don't feel good": 5, "dont feel good": 5, "not feel good": 5,
     "feel terrible": 5, "feel awful": 5, "feel horrible": 5,
     "can't take it": 5, "cant take it": 5, "can't take this": 5,
@@ -25,54 +26,43 @@ HIGH_DISTRESS_KEYWORDS = {
     "worthless": 5, "useless": 5, "failure": 5,
     "empty inside": 5, "hollow": 5, "void": 5,
     "paralyzed": 5, "frozen": 5, "trapped": 5,
-    "isolated": 5, "abandoned": 5, "rejected": 5,
     "ruined": 5, "over": 5, "done": 5,
+    # Severe emotional expressions  
+    "hate myself": 5, "hate my life": 5, "want to disappear": 5,
+    "nothing matters": 5, "why bother": 5, "what's the point": 5,
 }
 
-# Moderate distress keywords (weight: 3) - clear negative feelings
-MODERATE_DISTRESS_KEYWORDS = {
-    "feel bad": 3, "feeling down": 3, "feeling low": 3,
-    "feeling sad": 3, "feeling anxious": 3, "feeling depressed": 3,
-    "feeling stressed": 3, "stressed out": 3, "burnt out": 3,
-    "not okay": 3, "not ok": 3, "not well": 3, "unwell": 3,
-    "struggling": 3, "hard time": 3, "difficult time": 3,
-    "tough time": 3, "rough time": 3, "bad day": 3,
-    "exhausted": 3, "drained": 3, "tired": 3, "worn out": 3,
-    "worried": 3, "scared": 3, "afraid": 3, "fearful": 3,
-    "lonely": 3, "alone": 3, "isolated": 3, "disconnected": 3,
-    "helpless": 3, "powerless": 3, "stuck": 3,
-    "empty": 3, "numb": 3, "detached": 3,
-    "down in the dumps": 3, "feeling blue": 3, "melancholy": 3,
-    "anxious mess": 3, "emotional wreck": 3, "emotional": 3,
-    "can't focus": 3, "cant focus": 3, "distracted": 3,
-    "irritable": 3, "restless": 3, "tense": 3, "uneasy": 3,
-    "overthinking": 3, "ruminating": 3, "obsessing": 3,
-    "self-doubting": 3, "doubting myself": 3, "insecure": 3,
-    "frustrated": 3, "angry": 3, "upset": 3,
-    "tearful": 3, "crying": 3, "tears": 3,
-    "burned out": 3, "overloaded": 3, "burdened": 3,
-    "conflicted": 3, "torn": 3, "confused": 3,
-    "sad": 3, "depressed": 3, "anxious": 3,  # Common standalone emotions
-}
-
-# Mild distress keywords (weight: 1) - vague help-seeking
+# Mild distress keywords (weight: 1) - general support needed, friendly approach
 MILD_DISTRESS_KEYWORDS = {
-    "need help": 1, "help me": 1, "need support": 1,
-    "need someone": 1, "need to talk": 1, "want to talk": 1,
-    "someone to talk to": 1, "talk to someone": 1,
-    "something wrong": 1, "what's wrong with me": 1, "whats wrong with me": 1,
-    "confused": 1, "unsure": 1, "uncertain": 1,
-    "don't know": 1, "dont know": 1, "not sure": 1,
-    "a bit off": 1, "feeling off": 1, "not myself": 1,
-    "need a chat": 1, "need advice": 1, "need guidance": 1,
-    "curious": 1, "wondering": 1, "questioning": 1,
-    "mixed emotions": 1, "mixed feelings": 1, "complicated": 1,
-    "seeking advice": 1, "looking for help": 1, "seeking help": 1,
-    "hesitant": 1, "uncertain": 1, "indecisive": 1,
-    "pensive": 1, "reflective": 1, "thoughtful": 1,
-    "lost": 1, "adrift": 1, "directionless": 1,
-    "blah": 1, "meh": 1, "whatever": 1,
+    # General emotional states
+    "feel bad": 1, "feeling down": 1, "feeling low": 1,
+    "feeling sad": 1, "feeling anxious": 1, "feeling depressed": 1,
+    "feeling stressed": 1, "stressed out": 1, "burnt out": 1,
+    "not okay": 1, "not ok": 1, "not well": 1, "unwell": 1,
+    "struggling": 1, "hard time": 1, "difficult time": 1,
+    "tough time": 1, "rough time": 1, "bad day": 1,
+    "exhausted": 1, "drained": 1, "tired": 1, "worn out": 1,
+    "worried": 1, "scared": 1, "afraid": 1, "fearful": 1,
+    "lonely": 1, "alone": 1, "isolated": 1, "disconnected": 1,
+    "helpless": 1, "powerless": 1, "stuck": 1,
+    "empty": 1, "numb": 1, "detached": 1,
+    "down in the dumps": 1, "feeling blue": 1, "melancholy": 1,
+    "anxious mess": 1, "emotional wreck": 1, "emotional": 1,
+    "can't focus": 1, "cant focus": 1, "distracted": 1,
+    "irritable": 1, "restless": 1, "tense": 1, "uneasy": 1,
+    "overthinking": 1, "ruminating": 1, "obsessing": 1,
+    "self-doubting": 1, "doubting myself": 1, "insecure": 1,
+    "frustrated": 1, "angry": 1, "upset": 1,
+    "sad": 1, "depressed": 1, "anxious": 1,  # Common standalone emotions
+    "stressed": 1, "worried": 1, "down": 1,
+    "unhappy": 1, "hurt": 1, "bothered": 1,
+    # Help-seeking expressions
+    "need help": 1, "i need help": 1, "confused": 1,
+    "not sure": 1, "don't know": 1, "dont know": 1,
+    "need someone": 1, "need to talk": 1, "someone to talk to": 1,
 }
+
+
 
 
 class AgentState(TypedDict):
@@ -98,17 +88,15 @@ def detect_crisis(query: str) -> bool:
 def detect_distress_level(query: str) -> str:
     """
     Detect level of distress in user query using weighted scoring.
-    Returns: 'high', 'moderate', 'mild', or 'none'
+    Returns: 'high', 'mild', or 'none'
     
-    Scoring system:
-    - HIGH keywords: 5 points
-    - MODERATE keywords: 3 points  
-    - MILD keywords: 1 point
+    SIMPLIFIED 2-LEVEL SYSTEM:
+    - HIGH keywords: 5 points (severe crisis, immediate empathy needed)
+    - MILD keywords: 1 point (general support, friendly approach)
     
-    Thresholds (adjusted for single-phrase detection):
-    - 10+: HIGH distress (2+ high keywords OR 1 high + modifier)
-    - 5-9: MODERATE distress (1 high keyword OR 2-3 moderate keywords)
-    - 1-4: MILD distress (1-2 moderate keywords OR 1-4 mild keywords)
+    Thresholds:
+    - 5+: HIGH distress (any high keyword OR 5+ mild keywords with modifiers)
+    - 1-4: MILD distress (1-4 mild keywords)
     - 0: NONE
     """
     query_lower = query.lower()
@@ -121,11 +109,6 @@ def detect_distress_level(query: str) -> str:
         if phrase in query_lower:
             score += weight
     
-    # Check moderate distress patterns
-    for phrase, weight in MODERATE_DISTRESS_KEYWORDS.items():
-        if phrase in query_lower:
-            score += weight
-    
     # Check mild distress patterns
     for phrase, weight in MILD_DISTRESS_KEYWORDS.items():
         if phrase in query_lower:
@@ -134,11 +117,9 @@ def detect_distress_level(query: str) -> str:
     # Apply intensity modifiers
     score = apply_intensity_modifiers(query, score)
     
-    # Determine distress level based on adjusted score thresholds
-    if score >= 10:
+    # Determine distress level - SIMPLIFIED 2-LEVEL SYSTEM
+    if score >= 5:
         return 'high'
-    elif score >= 5:
-        return 'moderate'
     elif score >= 1:
         return 'mild'
     else:
@@ -164,16 +145,16 @@ def apply_intensity_modifiers(query: str, base_score: float) -> float:
     if any(adverb in query_lower for adverb in intensity_adverbs):
         modified_score *= 1.5
     
-    # Punctuation modifiers - exclamation marks
+    # Punctuation modifiers - exclamation marks (more sensitive)
     exclamation_count = query.count('!')
-    if exclamation_count >= 3:
-        modified_score += 2 * (exclamation_count - 2)
+    if exclamation_count >= 1:
+        modified_score += 2 * exclamation_count  # Any exclamation adds intensity
     
-    # ALL CAPS modifier (indicates shouting/intensity)
+    # ALL CAPS modifier (indicates shouting/intensity) - more sensitive
     words = query.split()
-    caps_words = [w for w in words if w.isupper() and len(w) > 2]
-    if len(caps_words) >= 2:
-        modified_score += 3
+    caps_words = [w for w in words if w.isupper() and len(w) >= 2]  # Reduced from >2 to >=2
+    if len(caps_words) >= 1:  # Even one caps word adds intensity
+        modified_score += 3 * len(caps_words)
     
     return modified_score
 
@@ -216,7 +197,7 @@ def router_node(state: AgentState, llm: ChatGroq, get_relevant_context) -> Agent
         # Calculate score for debugging
         query_lower = query.lower()
         score = 0
-        for phrase, weight in {**HIGH_DISTRESS_KEYWORDS, **MODERATE_DISTRESS_KEYWORDS, **MILD_DISTRESS_KEYWORDS}.items():
+        for phrase, weight in {**HIGH_DISTRESS_KEYWORDS, **MILD_DISTRESS_KEYWORDS}.items():
             if phrase in query_lower:
                 score += weight
         score = apply_intensity_modifiers(query, score)

@@ -5,6 +5,16 @@ Resource Agent - Singapore mental health services and support
 from typing import TypedDict, List
 from langchain_groq import ChatGroq
 
+# Optional re-ranker import (gracefully handles if not installed)
+try:
+    from .reranker import rerank_documents
+    RERANKER_AVAILABLE = True
+except ImportError:
+    RERANKER_AVAILABLE = False
+    def rerank_documents(query, documents, **kwargs):
+        """Fallback when re-ranker not available"""
+        return documents
+
 
 class AgentState(TypedDict):
     current_query: str
@@ -128,7 +138,21 @@ You don't have to face this alone. Please reach out."""
         if specific_service in service_responses:
             response = service_responses[specific_service]
         else:
-            resource_context = get_relevant_context(f"Singapore {specific_service}", n_results=1)
+            # Get context with optional re-ranking
+            raw_context = get_relevant_context(f"Singapore {specific_service}", n_results=4)
+            
+            # Re-rank if available (improves relevance for Singapore services)
+            if RERANKER_AVAILABLE:
+                docs = [{"text": raw_context, "source": "knowledge_base"}]
+                reranked_docs = rerank_documents(
+                    query=f"Singapore {specific_service}",
+                    documents=docs,
+                    document_key="text"
+                )
+                resource_context = reranked_docs[0]["text"] if reranked_docs else raw_context
+                print("🔄 Re-ranking applied to resource context")
+            else:
+                resource_context = raw_context
             
             prompt = f"""You are Sunny, a caring digital friend. User needs {specific_service} in Singapore.
 

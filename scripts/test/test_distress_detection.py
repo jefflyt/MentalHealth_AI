@@ -5,7 +5,7 @@ Test script for enhanced distress detection with weighted scoring
 import sys
 sys.path.append('.')
 from agent.router_agent import detect_distress_level, apply_intensity_modifiers
-from agent.router_agent import HIGH_DISTRESS_KEYWORDS, MODERATE_DISTRESS_KEYWORDS, MILD_DISTRESS_KEYWORDS
+from agent.router_agent import HIGH_DISTRESS_KEYWORDS, MILD_DISTRESS_KEYWORDS
 
 def calculate_score(query):
     """Calculate the raw score for debugging"""
@@ -19,10 +19,7 @@ def calculate_score(query):
             score += weight
             matched_phrases.append(f"{phrase} (HIGH: +{weight})")
     
-    for phrase, weight in MODERATE_DISTRESS_KEYWORDS.items():
-        if phrase in query_lower:
-            score += weight
-            matched_phrases.append(f"{phrase} (MODERATE: +{weight})")
+    # MODERATE_DISTRESS_KEYWORDS removed - now using 2-level system
     
     for phrase, weight in MILD_DISTRESS_KEYWORDS.items():
         if phrase in query_lower:
@@ -44,12 +41,12 @@ test_queries = [
     ("feel terrible and worthless", "HIGH"),
     ("I'm really really falling apart!!!", "HIGH"),  # With modifiers
     
-    # MODERATE distress (should be 8-14)
-    ("feeling sad", "MODERATE"),
-    ("I'm struggling", "MODERATE"),
-    ("feeling anxious and worried", "MODERATE"),
-    ("having a hard time", "MODERATE"),
-    ("I'm so exhausted", "MODERATE"),  # With modifier
+    # MILD distress (should be 1-4 in 2-level system)
+    ("feeling sad", "MILD"),
+    ("I'm struggling", "MILD"),
+    ("feeling anxious and worried", "MILD"),
+    ("having a hard time", "MILD"),
+    ("I'm so exhausted", "MILD"),  # With modifier
     
     # MILD distress (should be 3-7)
     ("i need help", "MILD"),
@@ -65,8 +62,8 @@ test_queries = [
     ("tell me about anxiety", "NONE"),
     
     # Edge cases with modifiers
-    ("I'm REALLY REALLY sad!!!", "MODERATE/HIGH"),  # Multiple modifiers
-    ("feeling down and confused", "MODERATE"),  # Multiple mild/moderate keywords
+    ("I'm REALLY REALLY sad!!!", "MILD/HIGH"),  # Multiple modifiers
+    ("feeling down and confused", "MILD"),  # Multiple mild keywords
     ("completely overwhelmed and can't take it", "HIGH"),  # Multiple high keywords
 ]
 
@@ -75,12 +72,10 @@ print("🧪 DISTRESS DETECTION TEST SUITE - WEIGHTED SCORING")
 print("=" * 80)
 print(f"\n📊 System Stats:")
 print(f"   - HIGH distress keywords: {len(HIGH_DISTRESS_KEYWORDS)} (weight: 5)")
-print(f"   - MODERATE distress keywords: {len(MODERATE_DISTRESS_KEYWORDS)} (weight: 3)")
 print(f"   - MILD distress keywords: {len(MILD_DISTRESS_KEYWORDS)} (weight: 1)")
-print(f"   - Total patterns: {len(HIGH_DISTRESS_KEYWORDS) + len(MODERATE_DISTRESS_KEYWORDS) + len(MILD_DISTRESS_KEYWORDS)}")
-print(f"\n📏 Score Thresholds:")
-print(f"   - HIGH: >= 10")
-print(f"   - MODERATE: 5-9")
+print(f"   - Total patterns: {len(HIGH_DISTRESS_KEYWORDS) + len(MILD_DISTRESS_KEYWORDS)}")
+print(f"\n📏 Score Thresholds (SIMPLIFIED 2-LEVEL):")
+print(f"   - HIGH: >= 5")
 print(f"   - MILD: 1-4")
 print(f"   - NONE: 0")
 print("\n" + "=" * 80)

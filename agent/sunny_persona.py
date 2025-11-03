@@ -30,20 +30,50 @@ def get_sunny_persona():
     }
 
 def get_distress_responses():
-    """Get Sunny's responses for different distress levels."""
-    return {
-        'high': {
+    """Get Sunny's varied responses for different distress levels - SIMPLIFIED 2-LEVEL SYSTEM."""
+    import random
+    
+    high_responses = [
+        {
             'opening': "I hear you, and I'm really glad you reached out to me. 💙",
-            'context': "It sounds like you're going through a really tough time right now. I'm Sunny, and I'm here with you, okay?"
+            'context': "It sounds like you're going through a really tough time right now. I'm Sunny, and I'm here with you, okay? I want you to know that you're not alone in this."
         },
-        'moderate': {
-            'opening': "Hey there, I'm Sunny, and I'm here for you. 💙",
-            'context': "I can help with whatever you're going through."
+        {
+            'opening': "Thank you for trusting me with how you're feeling right now. 💙",
+            'context': "I can hear that things are really hard for you. I'm Sunny, and I want you to know that I'm here to support you through this difficult moment."
         },
-        'mild': {
-            'opening': "Hi there! I'm Sunny, and I'm here to support you. 💙 😊",
-            'context': "What would you like help with?"
+        {
+            'opening': "I'm so glad you reached out - that took real strength. 💙",
+            'context': "It sounds like you're carrying something really heavy right now. I'm Sunny, and I want you to know that you don't have to face this alone."
+        },
+        {
+            'opening': "I hear the pain in your words, and I'm here with you. 💙",
+            'context': "Whatever you're going through right now feels overwhelming, and that's okay. I'm Sunny, and I want to help you find some support and relief."
         }
+    ]
+    
+    mild_responses = [
+        {
+            'opening': "Hi there! I'm Sunny, and I'm here to support you. 💙 😊",
+            'context': "I'm glad you reached out - that's always a good step! I'm here to help however I can."
+        },
+        {
+            'opening': "Hey! I'm Sunny, and I can hear that something's on your mind. 😊",
+            'context': "It sounds like you might be going through a bit of a rough patch. That's totally normal, and I'm here to chat about it with you."
+        },
+        {
+            'opening': "Hi! I'm Sunny, and I'm glad you decided to talk about how you're feeling. 😊",
+            'context': "Sometimes life throws us some curveballs, doesn't it? I'm here to listen and maybe help you work through whatever's going on."
+        },
+        {
+            'opening': "Hello! I'm Sunny, and I can sense you might need some support today. 😊 💙",
+            'context': "I'm really glad you're here - reaching out when we're struggling is actually pretty brave. Let's see how I can help."
+        }
+    ]
+    
+    return {
+        'high': random.choice(high_responses),
+        'mild': random.choice(mild_responses)
     }
 
 def get_boundary_statements():

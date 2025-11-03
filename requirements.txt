@@ -49,5 +49,12 @@ openpyxl>=3.0.0
 # Markdown Support (enhanced parsing)
 markdown>=3.4.0
 
+# Re-ranker Support (Optional - for improved RAG relevance)
+# NOW ENABLED: Using Python 3.11 with compatible dependencies
+# Requires numpy<2 for PyTorch compatibility
+sentence-transformers>=2.2.0
+torch>=2.0.0
+numpy<2
+
 # Testing
 pytest>=7.4.0
