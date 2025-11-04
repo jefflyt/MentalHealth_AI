@@ -38,7 +38,9 @@ class AgentState(TypedDict):
     current_agent: str
     crisis_detected: bool
     context: str  # Added for RAG context
-    distress_level: str  # 'high', 'moderate', 'mild', or 'none'
+    distress_level: str  # 'high', 'mild', or 'none'
+    last_menu_options: List[str]  # Track menu options for stateful turn tracking
+    turn_count: int  # Track conversation turns
 
 # Initialize Groq LLM
 def get_llm():
@@ -47,10 +49,18 @@ def get_llm():
         raise ValueError("GROQ_API_KEY not found in environment variables")
     return ChatGroq(
         model="llama-3.3-70b-versatile",
-        temperature=0.7,  # Balanced for consistency
+        temperature=0.1,  # Low temperature for consistency with natural variation
         max_tokens=150,  # Limit response length
         api_key=api_key
     )
+
+def generate_query_seed(query: str) -> int:
+    """Generate deterministic seed from query for consistent but varied responses."""
+    import hashlib
+    # Create hash of query text for deterministic seeding
+    hash_object = hashlib.md5(query.lower().strip().encode())
+    # Convert first 8 bytes to int for seed
+    return int(hash_object.hexdigest()[:8], 16)
 
 llm = get_llm()
 
@@ -300,7 +310,9 @@ def main():
                 "current_agent": "",
                 "crisis_detected": False,
                 "context": "",
-                "distress_level": "none"
+                "distress_level": "none",
+                "last_menu_options": [],
+                "turn_count": 0
             }
             
             # Run the workflow with RAG

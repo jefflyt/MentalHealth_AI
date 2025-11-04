@@ -71,7 +71,7 @@ def run_comprehensive_2level_test():
     print(f"\n😔 HIGH DISTRESS TESTS (≥5 points):")
     print("-" * 50)
     for query, expected_score in high_distress_queries:
-        level = detect_distress_level(query)
+        level, score = detect_distress_level(query)
         score = calculate_final_score(query)
         is_correct = level == "high"
         status = "✅" if is_correct else "❌"
@@ -94,7 +94,7 @@ def run_comprehensive_2level_test():
     print(f"\n😐 MILD DISTRESS TESTS (1-4 points):")
     print("-" * 50)
     for query, expected_score in mild_distress_queries:
-        level = detect_distress_level(query)
+        level, score = detect_distress_level(query)
         score = calculate_final_score(query)
         is_correct = level == "mild"
         status = "✅" if is_correct else "❌"
@@ -115,7 +115,7 @@ def run_comprehensive_2level_test():
     print(f"\n😊 NO DISTRESS TESTS (0 points):")
     print("-" * 50)
     for query in no_distress_queries:
-        level = detect_distress_level(query)
+        level, score = detect_distress_level(query)
         score = calculate_final_score(query)
         is_correct = level == "none"
         status = "✅" if is_correct else "❌"
@@ -135,7 +135,7 @@ def run_comprehensive_2level_test():
     print(f"\n🎯 EDGE CASE TESTS:")
     print("-" * 50)
     for query, expected_score, expected_level in edge_cases:
-        level = detect_distress_level(query)
+        level, score = detect_distress_level(query)
         score = calculate_final_score(query)
         is_correct = level == expected_level
         status = "✅" if is_correct else "❌"

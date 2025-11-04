@@ -161,7 +161,14 @@ Your warm, helpful tip:"""
         )
         
         try:
-            response = llm.invoke(prompt).content.strip()
+            # Generate deterministic seed for consistent responses
+            import hashlib
+            query_seed = int(hashlib.md5(query.lower().strip().encode()).hexdigest()[:8], 16)
+            
+            response = llm.invoke(
+                prompt,
+                config={"configurable": {"seed": query_seed}}
+            ).content.strip()
             
             # Hard limit - only first 2 sentences
             sentences = [s.strip() for s in response.split('.') if s.strip()]
@@ -218,7 +225,14 @@ Your warm response as Sunny:"""
             )
     
         try:
-            response = llm.invoke(prompt).content.strip()
+            # Generate deterministic seed for consistent responses
+            import hashlib
+            query_seed = int(hashlib.md5(query.lower().strip().encode()).hexdigest()[:8], 16)
+            
+            response = llm.invoke(
+                prompt,
+                config={"configurable": {"seed": query_seed}}
+            ).content.strip()
             
             # Only apply hard limit for normal responses, not assessment suggestions
             if not is_assessment_suggestion:

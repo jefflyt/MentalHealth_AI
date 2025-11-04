@@ -4,6 +4,11 @@ Resource Agent - Singapore mental health services and support
 
 from typing import TypedDict, List
 from langchain_groq import ChatGroq
+from .sunny_persona import build_sunny_prompt
+import logging
+
+# Configure logger
+logger = logging.getLogger(__name__)
 
 # Optional re-ranker import (gracefully handles if not installed)
 try:
@@ -29,10 +34,10 @@ def resource_agent_node(state: AgentState, llm: ChatGroq, get_relevant_context) 
     query = state["current_query"]
     conversation_history = state.get("messages", [])
     
-    print("\n" + "="*60)
-    print("🏥 [RESOURCE AGENT ACTIVATED]")
-    print(f"📝 Query: {query}")
-    print("="*60)
+    logger.info("="*60)
+    logger.info("🏥 [RESOURCE AGENT ACTIVATED]")
+    logger.info(f"📝 Query: {query}")
+    logger.info("="*60)
     
     # Detect if asking about specific services
     services = {
@@ -48,18 +53,18 @@ def resource_agent_node(state: AgentState, llm: ChatGroq, get_relevant_context) 
     for keyword, service in services.items():
         if keyword in query.lower():
             specific_service = service
-            print(f"🔍 Detected specific service: {specific_service}")
+            logger.info(f"🔍 Detected specific service: {specific_service}")
             break
     
     # Check if asking what help is available or general help request
     asking_options = any(word in query.lower() for word in ['what', 'where', 'help', 'support', 'available', 'options', 'need'])
     
     if asking_options:
-        print("📋 User asking for available options")
+        logger.info("📋 User asking for available options")
     
     # If just general "help" or "need help" - show warm, complete response
     if asking_options and not specific_service:
-        print("💙 Showing warm support message with resources")
+        logger.info("💙 Showing warm support message with resources")
         response = """Hey, I'm Sunny, and I'm here to support you. 💙 😊
 
 **Immediate Help in Singapore:**
@@ -81,7 +86,7 @@ What would you like to know more about?"""
     
     if specific_service:
         # Provide specific service info with pre-written, warm responses
-        print(f"💡 Providing specific info about: {specific_service}")
+        logger.info(f"💡 Providing specific info about: {specific_service}")
         
         # Pre-written responses for common services (warm and complete)
         service_responses = {
@@ -150,28 +155,39 @@ You don't have to face this alone. Please reach out."""
                     document_key="text"
                 )
                 resource_context = reranked_docs[0]["text"] if reranked_docs else raw_context
-                print("🔄 Re-ranking applied to resource context")
+                logger.debug("🔄 Re-ranking applied to resource context")
             else:
                 resource_context = raw_context
             
-            prompt = f"""You are Sunny, a caring digital friend. User needs {specific_service} in Singapore.
+            # Build Sunny-style prompt using shared utility
+            specific_instructions = f"""User needs {specific_service} in Singapore.
 
-{resource_context}
-
-As Sunny, provide this resource with your warm, supportive personality:
+Provide this resource with your warm, supportive personality:
 • Service name with emoji - make it friendly
 • Contact number (clean, no asterisks)  
 • 1-2 key points about why it's helpful
 • Encouraging closing from a caring friend
 
 Example Sunny style: "Hey! For counseling, I'd recommend [service] 🌟 at [number]. They're really understanding and have helped lots of people. You deserve support! 😊"
-
-Your warm response as Sunny:"""
+"""
+            
+            prompt = build_sunny_prompt(
+                agent_type="resource",
+                context=resource_context,
+                specific_instructions=specific_instructions
+            )
             
             try:
-                response = llm.invoke(prompt).content.strip()
+                # Generate deterministic seed for consistent resource responses
+                import hashlib
+                query_seed = int(hashlib.md5(query.lower().strip().encode()).hexdigest()[:8], 16)
+                
+                response = llm.invoke(
+                    prompt,
+                    config={"configurable": {"seed": query_seed}}
+                ).content.strip()
             except Exception as e:
-                print(f"LLM error: {e}")
+                logger.error(f"LLM error: {e}", exc_info=True)
                 response = f"I can help you find {specific_service}. Let me know if you need specific contact information."
         
         state["messages"].append(response)
@@ -180,7 +196,7 @@ Your warm response as Sunny:"""
         
     elif asking_options and len(conversation_history) > 0:
         # Show available services with Sunny's personality
-        print("📋 Showing service list")
+        logger.info("📋 Showing service list")
         response = """Hey! I'm Sunny, and I'd love to help you find the right support 😊
 
 **Mental Health Support in Singapore:** 💙
@@ -197,7 +213,7 @@ Which one sounds right for you? I'm here to help! 💙"""
         
     else:
         # Ask for details with Sunny's warm personality
-        print("💬 Asking user for more details")
+        logger.info("💬 Asking user for more details")
         response = "Hey, I'm Sunny! 😊 I can help you find support in Singapore. What kind of help are you looking for? 💙"
     
     state["messages"].append(response)

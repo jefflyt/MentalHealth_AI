@@ -49,7 +49,14 @@ Your caring crisis response as Sunny:"""
     )
     
     try:
-        response = llm.invoke(crisis_prompt).content
+        # Generate deterministic seed for consistent crisis responses
+        import hashlib
+        query_seed = int(hashlib.md5(query.lower().strip().encode()).hexdigest()[:8], 16)
+        
+        response = llm.invoke(
+            crisis_prompt,
+            config={"configurable": {"seed": query_seed}}
+        ).content
     except Exception as e:
         # Fallback crisis response
         response = """

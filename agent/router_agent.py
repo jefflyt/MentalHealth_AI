@@ -2,8 +2,13 @@
 Router Agent - Intelligent query routing with RAG context
 """
 
-from typing import TypedDict, List
+from typing import TypedDict, List, Tuple
 from langchain_groq import ChatGroq
+import re
+import logging
+
+# Configure logger for router agent
+logger = logging.getLogger(__name__)
 
 
 # Define distress keyword dictionaries - SIMPLIFIED 2-LEVEL SYSTEM
@@ -46,6 +51,8 @@ MILD_DISTRESS_KEYWORDS = {
     "lonely": 1, "alone": 1, "isolated": 1, "disconnected": 1,
     "helpless": 1, "powerless": 1, "stuck": 1,
     "empty": 1, "numb": 1, "detached": 1,
+    # Soft/qualifying phrases
+    "a bit off": 1, "feeling a bit off": 1,
     "down in the dumps": 1, "feeling blue": 1, "melancholy": 1,
     "anxious mess": 1, "emotional wreck": 1, "emotional": 1,
     "can't focus": 1, "cant focus": 1, "distracted": 1,
@@ -54,7 +61,7 @@ MILD_DISTRESS_KEYWORDS = {
     "self-doubting": 1, "doubting myself": 1, "insecure": 1,
     "frustrated": 1, "angry": 1, "upset": 1,
     "sad": 1, "depressed": 1, "anxious": 1,  # Common standalone emotions
-    "stressed": 1, "worried": 1, "down": 1,
+    "stressed": 1, "down": 1,  # Removed duplicate "worried"
     "unhappy": 1, "hurt": 1, "bothered": 1,
     # Help-seeking expressions
     "need help": 1, "i need help": 1, "confused": 1,
@@ -63,15 +70,15 @@ MILD_DISTRESS_KEYWORDS = {
 }
 
 
-
-
 class AgentState(TypedDict):
     current_query: str
     messages: List[str]
     current_agent: str
     crisis_detected: bool
     context: str
-    distress_level: str  # 'high', 'moderate', 'mild', or 'none'
+    distress_level: str  # 'high', 'mild', or 'none'
+    last_menu_options: List[str]  # Track menu options for stateful turn tracking
+    turn_count: int  # Track conversation turns
 
 
 def detect_crisis(query: str) -> bool:
@@ -85,10 +92,147 @@ def detect_crisis(query: str) -> bool:
     return any(keyword in query_lower for keyword in crisis_keywords)
 
 
-def detect_distress_level(query: str) -> str:
+def detect_explicit_intent(query: str) -> str:
+    """
+    Detect if user has explicit intent for a specific agent.
+    Returns agent name or empty string.
+    Priority order: assessment > resource > escalation
+    """
+    query_lower = query.lower()
+    
+    # Assessment intent - highest priority for explicit requests
+    assessment_keywords = ['assessment', 'test', 'evaluate', 'screen', 'dass', 'phq']
+    if any(keyword in query_lower for keyword in assessment_keywords):
+        return "assessment"
+    
+    # Resource intent - includes Singapore services and specific helplines/services
+    resource_keywords = [
+        'support service', 'mental health service', 'singapore service',
+        'hotline', 'helpline', 'crisis line', 'call', 'phone',
+        'imh', 'sos', 'samaritans', 'chat service', 'chat center',
+        'therapy', 'therapist', 'counseling', 'counselor', 'psychiatrist',
+        'clinic', 'hospital', 'emergency', 'urgent care',
+        'where can i', 'where to', 'who can help', 'where to get help'
+    ]
+    if any(keyword in query_lower for keyword in resource_keywords):
+        return "resource"
+    
+    # Human escalation - professional help requests
+    escalation_keywords = ['talk to someone', 'speak to professional', 'real person', 'human counselor']
+    if any(keyword in query_lower for keyword in escalation_keywords):
+        return "human_escalation"
+    
+    return ""
+
+
+def detect_menu_reply(query: str, last_menu_options: List[str]) -> bool:
+    """
+    Detect if user is replying to a numbered menu or selecting an option.
+    """
+    query_lower = query.lower().strip()
+    
+    # Check for numbered replies (1, 2, 3, etc.)
+    if query_lower.isdigit() and len(last_menu_options) > 0:
+        option_num = int(query_lower)
+        return 1 <= option_num <= len(last_menu_options)
+    
+    # Check for text-based selections
+    selection_patterns = [
+        "first", "second", "third", "fourth", "fifth",
+        "first one", "second one", "third one", 
+        "the first", "the second", "the third",
+        "option 1", "option 2", "option 3",
+        "choice 1", "choice 2", "choice 3"
+    ]
+    
+    return any(pattern in query_lower for pattern in selection_patterns)
+
+
+def update_menu_context(state: AgentState, menu_options: List[str]) -> None:
+    """
+    Update the state with menu options for stateful turn tracking.
+    Call this from agents when presenting numbered menus or options to users.
+    """
+    state["last_menu_options"] = menu_options
+
+
+def extract_menu_selection(query: str, menu_options: List[str]) -> str:
+    """
+    Extract the selected menu option from user query.
+    Returns the selected option text or empty string if no valid selection.
+    """
+    query_lower = query.lower().strip()
+    
+    # Handle numbered selection (1, 2, 3, etc.)
+    if query_lower.isdigit():
+        option_num = int(query_lower)
+        if 1 <= option_num <= len(menu_options):
+            return menu_options[option_num - 1]
+    
+    # Handle text-based selections
+    selection_map = {
+        "first": 0, "second": 1, "third": 2, "fourth": 3, "fifth": 4,
+        "first one": 0, "second one": 1, "third one": 2,
+        "the first": 0, "the second": 1, "the third": 2,
+        "option 1": 0, "option 2": 1, "option 3": 2,
+        "choice 1": 0, "choice 2": 1, "choice 3": 2
+    }
+    
+    for pattern, index in selection_map.items():
+        if pattern in query_lower and index < len(menu_options):
+            return menu_options[index]
+    
+    return ""
+
+
+def _matches_with_word_boundary(phrase: str, text: str) -> bool:
+    """
+    Check if phrase exists in text with word boundaries.
+    Prevents partial matches (e.g., "over" won't match inside "overwhelmed").
+    """
+    # Escape special regex characters in the phrase
+    escaped_phrase = re.escape(phrase)
+    # Create pattern with word boundaries
+    pattern = r'\b' + escaped_phrase + r'\b'
+    return bool(re.search(pattern, text, re.IGNORECASE))
+
+
+def _is_negated(phrase: str, text: str, phrase_position: int) -> bool:
+    """
+    Enhanced negation detection that handles various negation patterns.
+    
+    Handles:
+    - Simple negation: "not sad", "never happy"
+    - Compound negation: "not at all sad", "not really worried"
+    - No/none patterns: "no hope", "not any good"
+    """
+    # Negation patterns with varying intensities
+    negation_patterns = [
+        # Strong negation (completely negates)
+        r'\b(not|never|no|neither)\s+(at\s+all|really|actually|truly|very|particularly)\s+',
+        # Medium negation (with modifiers)
+        r'\b(not|never|no)\s+(that|so|too|very)\s+',
+        # Simple negation
+        r'\b(not|never|no|neither|don\'t|dont|doesn\'t|doesnt|didn\'t|didnt|won\'t|wont|isn\'t|isnt|wasn\'t|wasnt)\s+',
+        r'\b(hardly|barely|scarcely)\s+',
+    ]
+    
+    # Look in the 30 characters before the phrase
+    start_pos = max(0, phrase_position - 30)
+    preceding_text = text[start_pos:phrase_position]
+    
+    # Check each negation pattern
+    for pattern in negation_patterns:
+        if re.search(pattern, preceding_text, re.IGNORECASE):
+            return True
+    
+    return False
+
+
+def detect_distress_level(query: str) -> Tuple[str, float]:
     """
     Detect level of distress in user query using weighted scoring.
-    Returns: 'high', 'mild', or 'none'
+    Returns: Tuple of (distress_level, raw_score)
     
     SIMPLIFIED 2-LEVEL SYSTEM:
     - HIGH keywords: 5 points (severe crisis, immediate empathy needed)
@@ -98,32 +242,46 @@ def detect_distress_level(query: str) -> str:
     - 5+: HIGH distress (any high keyword OR 5+ mild keywords with modifiers)
     - 1-4: MILD distress (1-4 mild keywords)
     - 0: NONE
+    
+    Includes enhanced word-boundary matching and negation handling.
     """
     query_lower = query.lower()
     
     # Calculate weighted score
     score = 0
     
-    # Check high distress patterns
+    # Check high distress patterns with word-boundary and negation handling
     for phrase, weight in HIGH_DISTRESS_KEYWORDS.items():
-        if phrase in query_lower:
-            score += weight
+        # Use word-boundary matching to prevent partial matches
+        if _matches_with_word_boundary(phrase, query_lower):
+            phrase_index = query_lower.find(phrase.lower())
+            
+            # Enhanced negation detection
+            if not _is_negated(phrase, query_lower, phrase_index):
+                score += weight
     
-    # Check mild distress patterns
+    # Check mild distress patterns with word-boundary and negation handling
     for phrase, weight in MILD_DISTRESS_KEYWORDS.items():
-        if phrase in query_lower:
-            score += weight
+        # Use word-boundary matching to prevent partial matches
+        if _matches_with_word_boundary(phrase, query_lower):
+            phrase_index = query_lower.find(phrase.lower())
+            
+            # Enhanced negation detection
+            if not _is_negated(phrase, query_lower, phrase_index):
+                score += weight
     
     # Apply intensity modifiers
     score = apply_intensity_modifiers(query, score)
     
     # Determine distress level - SIMPLIFIED 2-LEVEL SYSTEM
     if score >= 5:
-        return 'high'
+        level = 'high'
     elif score >= 1:
-        return 'mild'
+        level = 'mild'
     else:
-        return 'none'
+        level = 'none'
+    
+    return (level, score)
 
 
 def apply_intensity_modifiers(query: str, base_score: float) -> float:
@@ -160,13 +318,72 @@ def apply_intensity_modifiers(query: str, base_score: float) -> float:
 
 
 def router_node(state: AgentState, llm: ChatGroq, get_relevant_context) -> AgentState:
-    """Enhanced router with RAG context."""
+    """Enhanced router with RAG context and prioritized explicit intent detection."""
     query = state["current_query"]
     
-    print("\n" + "="*60)
-    print("🧭 [ROUTER AGENT ACTIVATED]")
-    print(f"📝 Query: {query}")
-    print("="*60)
+    logger.info("="*60)
+    logger.info("🧭 [ROUTER AGENT ACTIVATED]")
+    logger.info(f"📝 Query: {query}")
+    logger.info("="*60)
+    
+    # Initialize state management fields if not present
+    if "last_menu_options" not in state:
+        state["last_menu_options"] = []
+    if "turn_count" not in state:
+        state["turn_count"] = 0
+    
+    state["turn_count"] += 1
+    
+    # Priority 1: Crisis detection (highest priority - always override)
+    # Check BEFORE expensive context fetch
+    if detect_crisis(query):
+        state["crisis_detected"] = True
+        state["current_agent"] = "crisis_intervention"
+        state["messages"].append("🚨 I'm here with you right now - getting you immediate support")
+        logger.warning("🚨 PRIORITY 1: Crisis detected → Crisis Agent")
+        return state
+    
+    # Priority 2: Menu replies and contextual references (handle stateful interactions)
+    if detect_menu_reply(query, state["last_menu_options"]):
+        # User is responding to a menu - check if it's a resource selection
+        selected_option = extract_menu_selection(query, state["last_menu_options"])
+        
+        if selected_option:
+            logger.info(f"📋 PRIORITY 2: Menu selection detected → '{selected_option}'")
+            
+            # Check if this looks like a resource selection (Singapore services, hotlines, etc.)
+            resource_keywords = ['hotline', 'helpline', 'chat', 'imh', 'sos', 'samaritans', 'service', 'therapy', 'counseling']
+            if any(keyword in selected_option.lower() for keyword in resource_keywords):
+                state["current_agent"] = "resource"
+                state["context"] = f"User selected: {selected_option}"
+                logger.info(f"🏥 Menu selection is a resource → Resource Agent")
+                return state
+        
+        # Default to information agent for other menu replies
+        state["current_agent"] = "information"
+        logger.info("📋 PRIORITY 2: Menu reply detected → Information Agent (with menu context)")
+        return state
+    
+    # Priority 3: Explicit intent detection (prioritize specific requests)
+    explicit_intent = detect_explicit_intent(query)
+    if explicit_intent:
+        state["current_agent"] = explicit_intent
+        logger.info(f"🎯 PRIORITY 3: Explicit intent detected → {explicit_intent.upper()} Agent")
+        return state
+    
+    # Priority 4: Distress detection (only if no explicit intent found)
+    # Check BEFORE expensive context fetch
+    distress_level, distress_score = detect_distress_level(query)
+    
+    if distress_level != 'none':
+        state["current_agent"] = "information"
+        state["distress_level"] = distress_level  # Pass distress level to information agent
+        logger.info(f"😔 PRIORITY 4: {distress_level.upper()} distress detected (score: {distress_score:.1f}) → Information Agent")
+        return state
+    
+    # Priority 5: Fallback LLM routing for general queries
+    # Only fetch expensive context if we reach this point
+    logger.info("🎯 PRIORITY 5: Using LLM routing for general query...")
     
     # Get initial context for routing decisions, but preserve any existing context (like assessment suggestions)
     existing_context = state.get("context", "")
@@ -175,38 +392,10 @@ def router_node(state: AgentState, llm: ChatGroq, get_relevant_context) -> Agent
     # If we have existing context (e.g., assessment suggestions), keep it and add routing context
     if existing_context:
         state["context"] = existing_context + "\n\n" + routing_context
-        print("🎯 Preserving existing context and adding routing context")
+        logger.debug("🎯 Preserving existing context and adding routing context")
     else:
         state["context"] = routing_context
     
-    # Priority 1: Crisis detection (highest priority)
-    if detect_crisis(query):
-        state["crisis_detected"] = True
-        state["current_agent"] = "crisis_intervention"
-        state["messages"].append("🚨 I'm here with you right now - getting you immediate support")
-        print("🚨 PRIORITY 1: Crisis detected → Crisis Agent")
-        return state
-    
-    # Priority 2: Distress detection with different levels
-    distress_level = detect_distress_level(query)
-    
-    if distress_level != 'none':
-        state["current_agent"] = "information"
-        state["distress_level"] = distress_level  # Pass distress level to information agent
-        
-        # Calculate score for debugging
-        query_lower = query.lower()
-        score = 0
-        for phrase, weight in {**HIGH_DISTRESS_KEYWORDS, **MILD_DISTRESS_KEYWORDS}.items():
-            if phrase in query_lower:
-                score += weight
-        score = apply_intensity_modifiers(query, score)
-        
-        print(f"😔 PRIORITY 2: {distress_level.upper()} distress detected (score: {score:.1f}) → Information Agent")
-        return state
-    
-    # Priority 3: Specific requests - use LLM routing
-    print("🎯 PRIORITY 3: Using LLM routing...")
     routing_prompt = f"""
     Based on the following context and user query, determine the most appropriate agent:
     
@@ -224,23 +413,30 @@ def router_node(state: AgentState, llm: ChatGroq, get_relevant_context) -> Agent
     """
     
     try:
-        routing_response = llm.invoke(routing_prompt).content.strip().lower()
+        # Generate deterministic seed from query for consistent routing
+        import hashlib
+        query_seed = int(hashlib.md5(query.lower().strip().encode()).hexdigest()[:8], 16)
+        
+        routing_response = llm.invoke(
+            routing_prompt,
+            config={"configurable": {"seed": query_seed}}
+        ).content.strip().lower()
         
         # Validate and set agent
         valid_agents = ["information", "resource", "assessment", "human_escalation"]
         if routing_response in valid_agents:
             state["current_agent"] = routing_response
-            print(f"✅ LLM routed to: {routing_response.upper()} Agent")
+            logger.info(f"✅ LLM routed to: {routing_response.upper()} Agent")
         else:
             # Default to information agent if unclear
             state["current_agent"] = "information"
-            print(f"⚠️  Invalid routing ({routing_response}), defaulting to: INFORMATION Agent")
+            logger.warning(f"⚠️  Invalid routing ({routing_response}), defaulting to: INFORMATION Agent")
         
         # Don't add routing message - let the agent respond directly
         
     except Exception as e:
-        print(f"❌ Routing error: {e}")
-        print("⚠️  Defaulting to: INFORMATION Agent")
+        logger.error(f"❌ Routing error: {e}", exc_info=True)
+        logger.warning("⚠️  Defaulting to: INFORMATION Agent")
         state["current_agent"] = "information"  # Safe default
     
     return state

@@ -85,7 +85,7 @@ total = 0
 
 for query, expected in test_queries:
     base_score, final_score, matched = calculate_score(query)
-    level = detect_distress_level(query)
+    level, score = detect_distress_level(query)
     
     # Check if match (allow flexibility for edge cases)
     if "/" in expected:

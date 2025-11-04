@@ -100,7 +100,7 @@ none_tests = 0
 
 for query, expected in test_queries:
     base_score, final_score, matched = calculate_score(query)
-    level = detect_distress_level(query)
+    level, score = detect_distress_level(query)
     
     # Track test distribution
     if expected == "HIGH":
@@ -148,7 +148,7 @@ modifier_examples = [
 
 for query, description in modifier_examples:
     base_score, final_score, matched = calculate_score(query)
-    level = detect_distress_level(query)
+    level, score = detect_distress_level(query)
     multiplier = final_score / base_score if base_score > 0 else 0
     
     print(f"\n   \"{query}\"")
@@ -175,7 +175,7 @@ boundary_tests = [
 print("Testing critical 5-point boundary between MILD and HIGH:")
 for query, expected in boundary_tests:
     base_score, final_score, matched = calculate_score(query)
-    level = detect_distress_level(query)
+    level, score = detect_distress_level(query)
     
     is_correct = level.upper() == expected.upper()
     status = "✅" if is_correct else "❌"

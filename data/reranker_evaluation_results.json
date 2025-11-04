@@ -1,0 +1,391 @@
+{
+  "evaluation_timestamp": 1762187899.932429,
+  "reranker_config": {
+    "enabled": false,
+    "model_loaded": false,
+    "model_name": "cross-encoder/ms-marco-TinyBERT-L-2-v2",
+    "relevance_threshold": 0.0,
+    "top_k": null
+  },
+  "summary": {
+    "total_queries": 8,
+    "reranker_enabled": false,
+    "average_times": {
+      "retrieval_time_ms": 316.1430060863495,
+      "reranking_time_ms": 0.009357929229736328,
+      "total_time_ms": 316.1523640155792
+    },
+    "average_improvements": {
+      "precision@1_improvement": 0.0,
+      "precision@1_improvement_pct": 0.0,
+      "precision@3_improvement": 0.0,
+      "precision@3_improvement_pct": 0.0,
+      "precision@5_improvement": 0.0,
+      "precision@5_improvement_pct": 0.0,
+      "recall@3_improvement": 0.0,
+      "recall@3_improvement_pct": 0.0,
+      "recall@5_improvement": 0.0,
+      "recall@5_improvement_pct": 0.0
+    },
+    "overall_metrics": {
+      "retrieval_only": {
+        "precision@1": 0.125,
+        "precision@3": 0.125,
+        "precision@5": 0.1,
+        "recall@3": 0.09375,
+        "recall@5": 0.15625
+      },
+      "with_reranker": {
+        "precision@1": 0.125,
+        "precision@3": 0.125,
+        "precision@5": 0.1,
+        "recall@3": 0.09375,
+        "recall@5": 0.15625
+      }
+    }
+  },
+  "detailed_results": [
+    {
+      "query": "I'm feeling very anxious and having panic attacks",
+      "description": "Anxiety and panic symptoms",
+      "retrieval_time_ms": 678.7400245666504,
+      "reranking_time_ms": 0.02002716064453125,
+      "total_time_ms": 678.7600517272949,
+      "expected_categories": [
+        "anxiety",
+        "panic_disorder"
+      ],
+      "retrieval_only": {
+        "precision@1": 0.0,
+        "precision@3": 0.0,
+        "precision@5": 0.0,
+        "recall@3": 0,
+        "recall@5": 0,
+        "total_docs": 8,
+        "relevant_docs": 0,
+        "top_category": "mental_health_info"
+      },
+      "with_reranker": {
+        "precision@1": 0.0,
+        "precision@3": 0.0,
+        "precision@5": 0.0,
+        "recall@3": 0,
+        "recall@5": 0,
+        "total_docs": 8,
+        "relevant_docs": 0,
+        "top_category": "mental_health_info"
+      },
+      "improvement": {
+        "precision@1_improvement": 0.0,
+        "precision@1_improvement_pct": 0,
+        "precision@3_improvement": 0.0,
+        "precision@3_improvement_pct": 0,
+        "precision@5_improvement": 0.0,
+        "precision@5_improvement_pct": 0,
+        "recall@3_improvement": 0,
+        "recall@3_improvement_pct": 0,
+        "recall@5_improvement": 0,
+        "recall@5_improvement_pct": 0
+      }
+    },
+    {
+      "query": "I feel depressed and have no energy",
+      "description": "Depression symptoms",
+      "retrieval_time_ms": 273.76317977905273,
+      "reranking_time_ms": 0.010013580322265625,
+      "total_time_ms": 273.773193359375,
+      "expected_categories": [
+        "depression"
+      ],
+      "retrieval_only": {
+        "precision@1": 0.0,
+        "precision@3": 0.0,
+        "precision@5": 0.0,
+        "recall@3": 0,
+        "recall@5": 0,
+        "total_docs": 8,
+        "relevant_docs": 0,
+        "top_category": "mental_health_info"
+      },
+      "with_reranker": {
+        "precision@1": 0.0,
+        "precision@3": 0.0,
+        "precision@5": 0.0,
+        "recall@3": 0,
+        "recall@5": 0,
+        "total_docs": 8,
+        "relevant_docs": 0,
+        "top_category": "mental_health_info"
+      },
+      "improvement": {
+        "precision@1_improvement": 0.0,
+        "precision@1_improvement_pct": 0,
+        "precision@3_improvement": 0.0,
+        "precision@3_improvement_pct": 0,
+        "precision@5_improvement": 0.0,
+        "precision@5_improvement_pct": 0,
+        "recall@3_improvement": 0,
+        "recall@3_improvement_pct": 0,
+        "recall@5_improvement": 0,
+        "recall@5_improvement_pct": 0
+      }
+    },
+    {
+      "query": "Where can I get mental health help in Singapore?",
+      "description": "Singapore mental health services",
+      "retrieval_time_ms": 256.6399574279785,
+      "reranking_time_ms": 0.010013580322265625,
+      "total_time_ms": 256.6499710083008,
+      "expected_categories": [
+        "singapore_resources"
+      ],
+      "retrieval_only": {
+        "precision@1": 0.0,
+        "precision@3": 0.0,
+        "precision@5": 0.2,
+        "recall@3": 0.0,
+        "recall@5": 0.5,
+        "total_docs": 8,
+        "relevant_docs": 2,
+        "top_category": "markdown"
+      },
+      "with_reranker": {
+        "precision@1": 0.0,
+        "precision@3": 0.0,
+        "precision@5": 0.2,
+        "recall@3": 0.0,
+        "recall@5": 0.5,
+        "total_docs": 8,
+        "relevant_docs": 2,
+        "top_category": "markdown"
+      },
+      "improvement": {
+        "precision@1_improvement": 0.0,
+        "precision@1_improvement_pct": 0,
+        "precision@3_improvement": 0.0,
+        "precision@3_improvement_pct": 0,
+        "precision@5_improvement": 0.0,
+        "precision@5_improvement_pct": 0.0,
+        "recall@3_improvement": 0.0,
+        "recall@3_improvement_pct": 0,
+        "recall@5_improvement": 0.0,
+        "recall@5_improvement_pct": 0.0
+      }
+    },
+    {
+      "query": "What is cognitive behavioral therapy?",
+      "description": "CBT information",
+      "retrieval_time_ms": 262.59589195251465,
+      "reranking_time_ms": 0.007152557373046875,
+      "total_time_ms": 262.6030445098877,
+      "expected_categories": [
+        "treatment",
+        "cognitive_behavioral_techniques"
+      ],
+      "retrieval_only": {
+        "precision@1": 0.0,
+        "precision@3": 0.0,
+        "precision@5": 0.0,
+        "recall@3": 0,
+        "recall@5": 0,
+        "total_docs": 8,
+        "relevant_docs": 0,
+        "top_category": "self_help"
+      },
+      "with_reranker": {
+        "precision@1": 0.0,
+        "precision@3": 0.0,
+        "precision@5": 0.0,
+        "recall@3": 0,
+        "recall@5": 0,
+        "total_docs": 8,
+        "relevant_docs": 0,
+        "top_category": "self_help"
+      },
+      "improvement": {
+        "precision@1_improvement": 0.0,
+        "precision@1_improvement_pct": 0,
+        "precision@3_improvement": 0.0,
+        "precision@3_improvement_pct": 0,
+        "precision@5_improvement": 0.0,
+        "precision@5_improvement_pct": 0,
+        "recall@3_improvement": 0,
+        "recall@3_improvement_pct": 0,
+        "recall@5_improvement": 0,
+        "recall@5_improvement_pct": 0
+      }
+    },
+    {
+      "query": "How can I practice mindfulness for stress?",
+      "description": "Mindfulness techniques",
+      "retrieval_time_ms": 270.51591873168945,
+      "reranking_time_ms": 0.0059604644775390625,
+      "total_time_ms": 270.521879196167,
+      "expected_categories": [
+        "coping",
+        "mindfulness_meditation"
+      ],
+      "retrieval_only": {
+        "precision@1": 0.0,
+        "precision@3": 0.0,
+        "precision@5": 0.0,
+        "recall@3": 0,
+        "recall@5": 0,
+        "total_docs": 8,
+        "relevant_docs": 0,
+        "top_category": "coping_strategies"
+      },
+      "with_reranker": {
+        "precision@1": 0.0,
+        "precision@3": 0.0,
+        "precision@5": 0.0,
+        "recall@3": 0,
+        "recall@5": 0,
+        "total_docs": 8,
+        "relevant_docs": 0,
+        "top_category": "coping_strategies"
+      },
+      "improvement": {
+        "precision@1_improvement": 0.0,
+        "precision@1_improvement_pct": 0,
+        "precision@3_improvement": 0.0,
+        "precision@3_improvement_pct": 0,
+        "precision@5_improvement": 0.0,
+        "precision@5_improvement_pct": 0,
+        "recall@3_improvement": 0,
+        "recall@3_improvement_pct": 0,
+        "recall@5_improvement": 0,
+        "recall@5_improvement_pct": 0
+      }
+    },
+    {
+      "query": "I can't sleep and it's affecting my mental health",
+      "description": "Sleep and mental health",
+      "retrieval_time_ms": 264.7559642791748,
+      "reranking_time_ms": 0.0069141387939453125,
+      "total_time_ms": 264.76287841796875,
+      "expected_categories": [
+        "self_care",
+        "sleep_hygiene"
+      ],
+      "retrieval_only": {
+        "precision@1": 1.0,
+        "precision@3": 1.0,
+        "precision@5": 0.6,
+        "recall@3": 0.75,
+        "recall@5": 0.75,
+        "total_docs": 8,
+        "relevant_docs": 4,
+        "top_category": "self_care"
+      },
+      "with_reranker": {
+        "precision@1": 1.0,
+        "precision@3": 1.0,
+        "precision@5": 0.6,
+        "recall@3": 0.75,
+        "recall@5": 0.75,
+        "total_docs": 8,
+        "relevant_docs": 4,
+        "top_category": "self_care"
+      },
+      "improvement": {
+        "precision@1_improvement": 0.0,
+        "precision@1_improvement_pct": 0.0,
+        "precision@3_improvement": 0.0,
+        "precision@3_improvement_pct": 0.0,
+        "precision@5_improvement": 0.0,
+        "precision@5_improvement_pct": 0.0,
+        "recall@3_improvement": 0.0,
+        "recall@3_improvement_pct": 0.0,
+        "recall@5_improvement": 0.0,
+        "recall@5_improvement_pct": 0.0
+      }
+    },
+    {
+      "query": "Emergency mental health crisis help",
+      "description": "Crisis intervention",
+      "retrieval_time_ms": 264.5871639251709,
+      "reranking_time_ms": 0.007867813110351562,
+      "total_time_ms": 264.59503173828125,
+      "expected_categories": [
+        "emergency",
+        "crisis"
+      ],
+      "retrieval_only": {
+        "precision@1": 0.0,
+        "precision@3": 0.0,
+        "precision@5": 0.0,
+        "recall@3": 0,
+        "recall@5": 0,
+        "total_docs": 8,
+        "relevant_docs": 0,
+        "top_category": "crisis_protocols"
+      },
+      "with_reranker": {
+        "precision@1": 0.0,
+        "precision@3": 0.0,
+        "precision@5": 0.0,
+        "recall@3": 0,
+        "recall@5": 0,
+        "total_docs": 8,
+        "relevant_docs": 0,
+        "top_category": "crisis_protocols"
+      },
+      "improvement": {
+        "precision@1_improvement": 0.0,
+        "precision@1_improvement_pct": 0,
+        "precision@3_improvement": 0.0,
+        "precision@3_improvement_pct": 0,
+        "precision@5_improvement": 0.0,
+        "precision@5_improvement_pct": 0,
+        "recall@3_improvement": 0,
+        "recall@3_improvement_pct": 0,
+        "recall@5_improvement": 0,
+        "recall@5_improvement_pct": 0
+      }
+    },
+    {
+      "query": "Therapy options for young adults in Singapore",
+      "description": "Youth therapy services",
+      "retrieval_time_ms": 257.54594802856445,
+      "reranking_time_ms": 0.0069141387939453125,
+      "total_time_ms": 257.5528621673584,
+      "expected_categories": [
+        "singapore_resources",
+        "therapy_questions"
+      ],
+      "retrieval_only": {
+        "precision@1": 0.0,
+        "precision@3": 0.0,
+        "precision@5": 0.0,
+        "recall@3": 0.0,
+        "recall@5": 0.0,
+        "total_docs": 8,
+        "relevant_docs": 1,
+        "top_category": "faqs"
+      },
+      "with_reranker": {
+        "precision@1": 0.0,
+        "precision@3": 0.0,
+        "precision@5": 0.0,
+        "recall@3": 0.0,
+        "recall@5": 0.0,
+        "total_docs": 8,
+        "relevant_docs": 1,
+        "top_category": "faqs"
+      },
+      "improvement": {
+        "precision@1_improvement": 0.0,
+        "precision@1_improvement_pct": 0,
+        "precision@3_improvement": 0.0,
+        "precision@3_improvement_pct": 0,
+        "precision@5_improvement": 0.0,
+        "precision@5_improvement_pct": 0,
+        "recall@3_improvement": 0.0,
+        "recall@3_improvement_pct": 0,
+        "recall@5_improvement": 0.0,
+        "recall@5_improvement_pct": 0
+      }
+    }
+  ]
+}

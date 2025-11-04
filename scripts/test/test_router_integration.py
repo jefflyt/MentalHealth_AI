@@ -145,7 +145,7 @@ def test_router_with_distress_levels():
         
         # Test individual components first
         crisis_detected = detect_crisis(query)
-        distress_level = detect_distress_level(query)
+        distress_level, score = detect_distress_level(query)
         
         # Test router (with mock LLM for non-distress cases)
         if llm and not crisis_detected and distress_level == "none":

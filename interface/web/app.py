@@ -188,7 +188,9 @@ def chat():
             current_agent="",
             crisis_detected=False,
             context=context,
-            distress_level="none"
+            distress_level="none",
+            last_menu_options=[],
+            turn_count=0
         )
         
         # Run the workflow

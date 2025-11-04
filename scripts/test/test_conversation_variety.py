@@ -47,7 +47,7 @@ def test_conversation_variety():
         print("-" * 60)
         
         # Detect distress level
-        distress_level = detect_distress_level(query)
+        distress_level, score = detect_distress_level(query)
         print(f"📊 Distress Level: {distress_level.upper()}")
         
         # Create state

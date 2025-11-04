@@ -19,10 +19,12 @@ User Browser (http://localhost:5001)
     ↓
 Flask Web Interface
     ↓
-Agent Router (3-Level Priority System)
+Agent Router (5-Level Priority System)
     ├── Priority 1: Crisis Keywords → Crisis Agent
-    ├── Priority 2: Distress Detection → Information Agent (Menu: 1-4)
-    └── Priority 3: LLM Routing → [Resource|Assessment|Escalation]
+    ├── Priority 2: Menu Replies → Information Agent (contextual)
+    ├── Priority 3: Explicit Intent → [Resource|Assessment|Escalation]
+    ├── Priority 4: Distress Detection → Information Agent (HIGH/MILD)
+    └── Priority 5: LLM Routing → General queries
     ↓
 ChromaDB RAG (485 chunks from ~29 files - Enhanced!)
     ↓
@@ -66,10 +68,15 @@ Response with Singapore Resources
    - Escalation Agent: Professional referrals
    - Information Agent: General mental health education
 
-4. **💡 Assessment Suggestions** (Intelligent Proactive Support)
-   - After 2+ vague responses ("ok", "fine", "whatever")
-   - Triggers longer, supportive responses suggesting self-assessment
-   - Uses existing assessment results for personalized conversations
+5. **🤖 LLM Routing** (Priority 5 - Fallback)
+   - General queries without crisis/distress/explicit intent
+   - Uses RAG context to intelligently route
+   - Routes to: Information Agent (default) or specialized agents based on context
+
+**💡 Additional Features:**
+- **Assessment Suggestions**: After vague responses, suggests self-assessment tools
+- **Context Preservation**: Maintains conversation state across interactions
+- **Adaptive Responses**: Tailors empathy level to detected distress
 
 ## 📁 Project Structure
 

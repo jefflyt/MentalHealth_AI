@@ -47,7 +47,14 @@ def assessment_agent_node(state: AgentState, llm: ChatGroq, get_relevant_context
     """
     
     try:
-        response = llm.invoke(assessment_prompt).content
+        # Generate deterministic seed for consistent assessment responses
+        import hashlib
+        query_seed = int(hashlib.md5(query.lower().strip().encode()).hexdigest()[:8], 16)
+        
+        response = llm.invoke(
+            assessment_prompt,
+            config={"configurable": {"seed": query_seed}}
+        ).content
         
         response += "\n\n💙 *Remember, I'm here as your supportive friend, but these tools are just starting points. A mental health professional can give you the complete picture and personalized care you deserve! 😊*"
         
