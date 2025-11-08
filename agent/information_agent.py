@@ -17,6 +17,118 @@ except ImportError:
         return documents
 
 
+# ============================================================================
+# CACHED ANSWERS - Instant responses for common queries (no LLM needed)
+# ============================================================================
+COMMON_QUERIES = {
+    'what is anxiety': {
+        'answer': """Anxiety is your body's natural response to stress - it's that worried or nervous feeling. 💙
+
+Common signs:
+• Racing thoughts
+• Restlessness
+• Physical tension
+
+It's very common, and there are ways to manage it! Want to know more about coping strategies?""",
+        'keywords': ['what is anxiety', 'define anxiety', 'anxiety definition', 'what does anxiety mean']
+    },
+    'what is depression': {
+        'answer': """Depression is more than just feeling sad - it's a persistent low mood that affects daily life. 💙
+
+Common signs:
+• Feeling down most days
+• Loss of interest in activities
+• Changes in sleep or appetite
+• Fatigue
+
+You're not alone in this. Want to explore some support options?""",
+        'keywords': ['what is depression', 'define depression', 'depression definition', 'what does depression mean']
+    },
+    'what is stress': {
+        'answer': """Stress is your body and mind's reaction to challenges or demands. 💙
+
+It can show up as:
+• Feeling overwhelmed
+• Difficulty concentrating
+• Physical tension
+• Sleep issues
+
+Some stress is normal, but I can help you learn ways to manage it better! Want some tips?""",
+        'keywords': ['what is stress', 'define stress', 'stress definition', 'what does stress mean']
+    },
+    'breathing exercise': {
+        'answer': """Here's a simple breathing exercise you can try right now: 🌬️
+
+**Box Breathing (4-4-4-4):**
+1. Breathe in for 4 counts
+2. Hold for 4 counts
+3. Breathe out for 4 counts
+4. Hold for 4 counts
+5. Repeat 3-4 times
+
+This really helps calm your nervous system. Give it a try! 😊""",
+        'keywords': ['breathing exercise', 'how to breathe', 'breathing technique', 'deep breathing']
+    }
+}
+
+
+# ============================================================================
+# OFF-TOPIC DETECTION - Pre-LLM filter (saves LLM calls)
+# ============================================================================
+def is_off_topic(query: str) -> bool:
+    """
+    Check if query is off-topic BEFORE LLM call.
+    Returns True if query is clearly not about mental health.
+    """
+    query_lower = query.lower().strip()
+    
+    # Mental health keywords - if any present, likely on-topic
+    mental_health_keywords = [
+        'feel', 'feeling', 'emotion', 'anxiety', 'stress', 'depress', 'sad', 'worry',
+        'mental', 'health', 'wellbeing', 'cope', 'help', 'support', 'lonely', 'tired',
+        'overwhelm', 'difficult', 'hard', 'struggle', 'hurt', 'pain', 'upset', 'angry',
+        'scared', 'afraid', 'nervous', 'panic', 'mood', 'sleep', 'therapy', 'counseling'
+    ]
+    
+    if any(keyword in query_lower for keyword in mental_health_keywords):
+        return False  # On-topic
+    
+    # Off-topic indicators (general knowledge, unrelated topics)
+    off_topic_patterns = [
+        'weather', 'temperature', 'forecast', 'rain', 'sunny',
+        'recipe', 'cook', 'food', 'restaurant', 'eat',
+        'movie', 'film', 'tv show', 'actor', 'actress',
+        'sports', 'football', 'soccer', 'basketball',
+        'news', 'politics', 'election', 'president',
+        'stock', 'market', 'investment', 'money',
+        'math', 'calculate', 'equation', 'solve',
+        'history', 'geography', 'science',
+        'translate', 'language',
+        'joke', 'funny', 'entertainment'
+    ]
+    
+    # If query is very short (1-2 words) and has off-topic pattern, likely off-topic
+    words = query_lower.split()
+    if len(words) <= 3 and any(pattern in query_lower for pattern in off_topic_patterns):
+        return True
+    
+    return False
+
+
+def get_cached_answer(query: str) -> str:
+    """
+    Check if query matches a cached common answer.
+    Returns cached answer or empty string if no match.
+    """
+    query_lower = query.lower().strip()
+    
+    for topic, data in COMMON_QUERIES.items():
+        if any(keyword in query_lower for keyword in data['keywords']):
+            return data['answer']
+    
+    return ""
+
+
 class AgentState(TypedDict):
     current_query: str
     messages: List[str]
@@ -27,7 +139,7 @@ class AgentState(TypedDict):
 
 
 def information_agent_node(state: AgentState, llm: ChatGroq, get_relevant_context) -> AgentState:
-    """RAG-enhanced information agent with Sunny's personality."""
+    """RAG-enhanced information agent with Sunny's personality - OPTIMIZED."""
     query = state["current_query"]
     conversation_history = state.get("messages", [])
     distress_level = state.get("distress_level", "none")
@@ -40,6 +152,25 @@ def information_agent_node(state: AgentState, llm: ChatGroq, get_relevant_contex
     print("\n" + "="*60)
     print("📚 [SUNNY - INFORMATION AGENT ACTIVATED]")
     print("="*60)
+    
+    # ========================================================================
+    # OPTIMIZATION 1: Check cached answers first (instant response, no LLM)
+    # ========================================================================
+    cached_answer = get_cached_answer(query)
+    if cached_answer and distress_level == 'none':
+        print("⚡ CACHED ANSWER: Returning instant response (no LLM call)")
+        state["messages"].append(cached_answer)
+        state["current_agent"] = "complete"
+        return state
+    
+    # ========================================================================
+    # OPTIMIZATION 2: Off-topic detection (skip LLM for unrelated queries)
+    # ========================================================================
+    if is_off_topic(query) and distress_level == 'none':
+        print("🚫 OFF-TOPIC DETECTED: Returning redirect (no LLM call)")
+        state["messages"].append(sunny['redirect_template'])
+        state["current_agent"] = "complete"
+        return state
     
     # Use distress level from router (SIMPLIFIED 2-LEVEL SYSTEM)
     sounds_unstable = distress_level in ['high', 'mild']
@@ -149,15 +280,11 @@ What's on your mind today?"""
         else:
             info_context = raw_context
         
+        # SIMPLIFIED PROMPT - removed examples and lengthy instructions
         prompt = build_sunny_prompt(
             agent_type='information',
-            context=f"User wants: {selected_service['name']}\n\nKnowledge context: {info_context}",
-            specific_instructions=f"""Provide ONE clear, actionable tip (1-2 sentences max). Use your validation phrases like: {', '.join(sunny['validation_phrases'][:3])}
-
-Example response style:
-"Try taking three slow, deep breaths - it really can help calm your mind when things feel overwhelming. You've got this! 😊"
-
-Your warm, helpful tip:"""
+            context=f"Topic: {selected_service['name']}\n\nKnowledge: {info_context}",
+            specific_instructions="Provide ONE actionable tip (1-2 sentences). Be warm and supportive."
         )
         
         try:
@@ -176,7 +303,7 @@ Your warm, helpful tip:"""
                 response = '. '.join(sentences[:2]) + '.'
             
             # Add formatting for readability
-            response = f"{response}\n\n� *Want to know more? Just ask!*"
+            response = f"{response}\n\n💬 *Want to know more? Just ask!*"
             
         except Exception as e:
             print(f"Service response error: {e}")
@@ -202,26 +329,18 @@ Your warm, helpful tip:"""
         is_assessment_suggestion = external_context and "ASSESSMENT_SUGGESTION" in external_context
         
         if is_assessment_suggestion:
+            # SIMPLIFIED PROMPT - removed example responses
             prompt = build_sunny_prompt(
                 agent_type='information',
                 context=full_context,
-                specific_instructions=f"""The user has given several vague responses and might benefit from a self-assessment. Respond warmly as Sunny and suggest they try the self-assessment tool to better understand their mental health.
-
-{external_context}
-
-Be supportive and explain how the assessment could help them. End with encouraging them to click the Assessment tab or take the DASS-21 assessment.
-
-Your supportive response as Sunny:"""
+                specific_instructions="Suggest the DASS-21 assessment warmly. Explain how it could help them understand their mental health."
             )
         else:
+            # SIMPLIFIED PROMPT - removed lengthy instructions
             prompt = build_sunny_prompt(
                 agent_type='information',
                 context=full_context,
-                specific_instructions=f"""If this is about mental health, wellbeing, or emotions: Respond as Sunny with warmth and support in 1-2 SHORT sentences using phrases like: {', '.join(sunny['validation_phrases'][:2])}
-
-If this is NOT about mental health: Use Sunny's redirect: "{sunny['redirect_template']}"
-
-Your warm response as Sunny:"""
+                specific_instructions="Respond warmly in 1-2 SHORT sentences."
             )
     
         try:

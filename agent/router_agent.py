@@ -77,6 +77,7 @@ class AgentState(TypedDict):
     crisis_detected: bool
     context: str
     distress_level: str  # 'high', 'mild', or 'none'
+    distress_score: float  # Cache distress score to avoid recalculation
     last_menu_options: List[str]  # Track menu options for stateful turn tracking
     turn_count: int  # Track conversation turns
 
@@ -231,6 +232,7 @@ def _is_negated(phrase: str, text: str, phrase_position: int) -> bool:
 
 def detect_distress_level(query: str) -> Tuple[str, float]:
     """
+    CONSOLIDATED distress detection - single source of truth.
     Detect level of distress in user query using weighted scoring.
     Returns: Tuple of (distress_level, raw_score)
     
@@ -244,6 +246,9 @@ def detect_distress_level(query: str) -> Tuple[str, float]:
     - 0: NONE
     
     Includes enhanced word-boundary matching and negation handling.
+    
+    NOTE: This is the ONLY function that should calculate distress scores.
+    All other code should call this and cache/reuse the result.
     """
     query_lower = query.lower()
     
@@ -317,8 +322,125 @@ def apply_intensity_modifiers(query: str, base_score: float) -> float:
     return modified_score
 
 
+def classify_query_fast(query: str) -> str:
+    """
+    Fast lightweight query classifier using keyword matching.
+    Replaces expensive LLM fallback for general queries.
+    
+    Returns: agent name ('information', 'resource', 'assessment', 'human_escalation')
+    """
+    query_lower = query.lower()
+    
+    # Assessment keywords - highest priority for explicit requests
+    if any(kw in query_lower for kw in ['assessment', 'test', 'evaluate', 'screen', 'dass', 'phq']):
+        return 'assessment'
+    
+    # Resource keywords - Singapore services and specific help
+    resource_keywords = [
+        'support service', 'mental health service', 'singapore service',
+        'hotline', 'helpline', 'crisis line', 'call', 'phone',
+        'imh', 'sos', 'samaritans', 'chat service', 'therapy',
+        'therapist', 'counseling', 'counselor', 'psychiatrist',
+        'clinic', 'hospital', 'where can i', 'where to', 'who can help'
+    ]
+    if any(kw in query_lower for kw in resource_keywords):
+        return 'resource'
+    
+    # Human escalation keywords
+    if any(kw in query_lower for kw in ['talk to someone', 'speak to professional', 'real person', 'human']):
+        return 'human_escalation'
+    
+    # Educational/informational keywords
+    info_keywords = [
+        'what is', 'tell me about', 'explain', 'learn', 'understand',
+        'how to', 'can you help', 'advice', 'tips', 'cope', 'deal with',
+        'manage', 'handle', 'overcome', 'improve', 'feel better'
+    ]
+    if any(kw in query_lower for kw in info_keywords):
+        return 'information'
+    
+    # Default to information agent for general queries
+    return 'information'
+
+
+def route_query(query: str, state: AgentState) -> dict:
+    """
+    STREAMLINED unified routing function - single pass classification.
+    Evaluates all criteria and returns routing decision in one pass.
+    
+    Priority Order:
+    1. Crisis detection (immediate override)
+    2. Menu replies (stateful interaction)
+    3. Explicit intent (specific requests)
+    4. Distress detection (emotional state)
+    5. Fast keyword classification (no LLM fallback)
+    
+    Returns: dict with 'agent', 'distress_level', 'distress_score', 'crisis_detected'
+    """
+    # Initialize result
+    result = {
+        'agent': 'information',  # default
+        'distress_level': 'none',
+        'distress_score': 0.0,
+        'crisis_detected': False
+    }
+    
+    # Priority 1: Crisis detection (highest priority)
+    if detect_crisis(query):
+        result['agent'] = 'crisis_intervention'
+        result['crisis_detected'] = True
+        logger.warning("🚨 PRIORITY 1: Crisis detected → Crisis Agent")
+        return result
+    
+    # Priority 2: Menu replies (stateful interaction)
+    last_menu_options = state.get("last_menu_options", [])
+    if detect_menu_reply(query, last_menu_options):
+        selected_option = extract_menu_selection(query, last_menu_options)
+        
+        if selected_option:
+            logger.info(f"📋 PRIORITY 2: Menu selection → '{selected_option}'")
+            
+            # Check if resource selection
+            if any(kw in selected_option.lower() for kw in ['hotline', 'helpline', 'chat', 'imh', 'sos', 'service', 'therapy']):
+                result['agent'] = 'resource'
+                logger.info("🏥 Menu selection is resource → Resource Agent")
+                return result
+        
+        # Default menu reply to information
+        result['agent'] = 'information'
+        logger.info("📋 PRIORITY 2: Menu reply → Information Agent")
+        return result
+    
+    # Priority 3: Explicit intent detection
+    explicit_intent = detect_explicit_intent(query)
+    if explicit_intent:
+        result['agent'] = explicit_intent
+        logger.info(f"🎯 PRIORITY 3: Explicit intent → {explicit_intent.upper()} Agent")
+        return result
+    
+    # Priority 4: Distress detection (calculate ONCE and cache)
+    distress_level, distress_score = detect_distress_level(query)
+    result['distress_level'] = distress_level
+    result['distress_score'] = distress_score
+    
+    if distress_level != 'none':
+        result['agent'] = 'information'
+        logger.info(f"😔 PRIORITY 4: {distress_level.upper()} distress (score: {distress_score:.1f}) → Information Agent")
+        return result
+    
+    # Priority 5: Fast keyword classification (NO LLM FALLBACK)
+    agent = classify_query_fast(query)
+    result['agent'] = agent
+    logger.info(f"🔍 PRIORITY 5: Fast classification → {agent.upper()} Agent")
+    
+    return result
+
+
 def router_node(state: AgentState, llm: ChatGroq, get_relevant_context) -> AgentState:
-    """Enhanced router with RAG context and prioritized explicit intent detection."""
+    """
+    REFACTORED Enhanced router - streamlined single-pass classification.
+    Removed expensive LLM fallback, using fast keyword classification instead.
+    """
     query = state["current_query"]
     
     logger.info("="*60)
@@ -334,109 +456,32 @@ def router_node(state: AgentState, llm: ChatGroq, get_relevant_context) -> Agent
     
     state["turn_count"] += 1
     
-    # Priority 1: Crisis detection (highest priority - always override)
-    # Check BEFORE expensive context fetch
-    if detect_crisis(query):
-        state["crisis_detected"] = True
-        state["current_agent"] = "crisis_intervention"
+    # Use streamlined routing function (single pass, no LLM fallback)
+    routing_result = route_query(query, state)
+    
+    # Update state with routing results
+    state["current_agent"] = routing_result['agent']
+    state["distress_level"] = routing_result['distress_level']
+    state["distress_score"] = routing_result['distress_score']  # Cache score
+    state["crisis_detected"] = routing_result['crisis_detected']
+    
+    # Add crisis message if detected
+    if routing_result['crisis_detected']:
         state["messages"].append("🚨 I'm here with you right now - getting you immediate support")
-        logger.warning("🚨 PRIORITY 1: Crisis detected → Crisis Agent")
-        return state
     
-    # Priority 2: Menu replies and contextual references (handle stateful interactions)
-    if detect_menu_reply(query, state["last_menu_options"]):
-        # User is responding to a menu - check if it's a resource selection
-        selected_option = extract_menu_selection(query, state["last_menu_options"])
+    # Get context only if needed (not for crisis or menu replies)
+    if routing_result['agent'] not in ['crisis_intervention'] and not detect_menu_reply(query, state.get("last_menu_options", [])):
+        existing_context = state.get("context", "")
+        routing_context = get_relevant_context(f"route classify {query}", n_results=2)
         
-        if selected_option:
-            logger.info(f"📋 PRIORITY 2: Menu selection detected → '{selected_option}'")
-            
-            # Check if this looks like a resource selection (Singapore services, hotlines, etc.)
-            resource_keywords = ['hotline', 'helpline', 'chat', 'imh', 'sos', 'samaritans', 'service', 'therapy', 'counseling']
-            if any(keyword in selected_option.lower() for keyword in resource_keywords):
-                state["current_agent"] = "resource"
-                state["context"] = f"User selected: {selected_option}"
-                logger.info(f"🏥 Menu selection is a resource → Resource Agent")
-                return state
-        
-        # Default to information agent for other menu replies
-        state["current_agent"] = "information"
-        logger.info("📋 PRIORITY 2: Menu reply detected → Information Agent (with menu context)")
-        return state
-    
-    # Priority 3: Explicit intent detection (prioritize specific requests)
-    explicit_intent = detect_explicit_intent(query)
-    if explicit_intent:
-        state["current_agent"] = explicit_intent
-        logger.info(f"🎯 PRIORITY 3: Explicit intent detected → {explicit_intent.upper()} Agent")
-        return state
-    
-    # Priority 4: Distress detection (only if no explicit intent found)
-    # Check BEFORE expensive context fetch
-    distress_level, distress_score = detect_distress_level(query)
-    
-    if distress_level != 'none':
-        state["current_agent"] = "information"
-        state["distress_level"] = distress_level  # Pass distress level to information agent
-        logger.info(f"😔 PRIORITY 4: {distress_level.upper()} distress detected (score: {distress_score:.1f}) → Information Agent")
-        return state
-    
-    # Priority 5: Fallback LLM routing for general queries
-    # Only fetch expensive context if we reach this point
-    logger.info("🎯 PRIORITY 5: Using LLM routing for general query...")
-    
-    # Get initial context for routing decisions, but preserve any existing context (like assessment suggestions)
-    existing_context = state.get("context", "")
-    routing_context = get_relevant_context(f"route classify {query}", n_results=2)
-    
-    # If we have existing context (e.g., assessment suggestions), keep it and add routing context
-    if existing_context:
-        state["context"] = existing_context + "\n\n" + routing_context
-        logger.debug("🎯 Preserving existing context and adding routing context")
-    else:
-        state["context"] = routing_context
-    
-    routing_prompt = f"""
-    Based on the following context and user query, determine the most appropriate agent:
-    
-    Context: {routing_context}
-    
-    User Query: "{query}"
-    
-    Available Agents:
-    - information: General mental health information and education
-    - resource: Singapore mental health services and resources (only if specifically asking about services/resources)
-    - assessment: DASS-21 mental health screening (only if asking about testing/assessment)
-    - human_escalation: Complex cases requiring human support
-    
-    Respond with only the agent name that best matches the query.
-    """
-    
-    try:
-        # Generate deterministic seed from query for consistent routing
-        import hashlib
-        query_seed = int(hashlib.md5(query.lower().strip().encode()).hexdigest()[:8], 16)
-        
-        routing_response = llm.invoke(
-            routing_prompt,
-            config={"configurable": {"seed": query_seed}}
-        ).content.strip().lower()
-        
-        # Validate and set agent
-        valid_agents = ["information", "resource", "assessment", "human_escalation"]
-        if routing_response in valid_agents:
-            state["current_agent"] = routing_response
-            logger.info(f"✅ LLM routed to: {routing_response.upper()} Agent")
+        # Preserve existing context if present
+        if existing_context:
+            state["context"] = existing_context + "\n\n" + routing_context
         else:
-            # Default to information agent if unclear
-            state["current_agent"] = "information"
-            logger.warning(f"⚠️  Invalid routing ({routing_response}), defaulting to: INFORMATION Agent")
-        
-        # Don't add routing message - let the agent respond directly
-        
-    except Exception as e:
-        logger.error(f"❌ Routing error: {e}", exc_info=True)
-        logger.warning("⚠️  Defaulting to: INFORMATION Agent")
-        state["current_agent"] = "information"  # Safe default
+            state["context"] = routing_context
+    
+    logger.info(f"✅ Routed to: {state['current_agent'].upper()} Agent")
+    if routing_result['distress_level'] != 'none':
+        logger.info(f"   Distress: {routing_result['distress_level'].upper()} (score: {routing_result['distress_score']:.1f})")
     
     return state

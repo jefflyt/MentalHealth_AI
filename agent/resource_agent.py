@@ -21,76 +21,42 @@ except ImportError:
         return documents
 
 
-class AgentState(TypedDict):
-    current_query: str
-    messages: List[str]
-    current_agent: str
-    crisis_detected: bool
-    context: str
+# ============================================================================
+# INSTANT ANSWERS - Pre-filled vetted responses (no LLM needed)
+# ============================================================================
+KNOWN_SERVICES = {
+    'imh': {
+        'response': """**Institute of Mental Health (IMH)** 🏥
 
+Singapore's specialist psychiatric hospital:
 
-def resource_agent_node(state: AgentState, llm: ChatGroq, get_relevant_context) -> AgentState:
-    """RAG-enhanced resource agent for Singapore services."""
-    query = state["current_query"]
-    conversation_history = state.get("messages", [])
-    
-    logger.info("="*60)
-    logger.info("🏥 [RESOURCE AGENT ACTIVATED]")
-    logger.info(f"📝 Query: {query}")
-    logger.info("="*60)
-    
-    # Detect if asking about specific services
-    services = {
-        'chat': 'CHAT services',
-        'imh': 'IMH services',
-        'therapy': 'therapy and counseling',
-        'counseling': 'counseling services',
-        'hotline': 'crisis hotlines',
-        'emergency': 'emergency support'
-    }
-    
-    specific_service = None
-    for keyword, service in services.items():
-        if keyword in query.lower():
-            specific_service = service
-            logger.info(f"🔍 Detected specific service: {specific_service}")
-            break
-    
-    # Check if asking what help is available or general help request
-    asking_options = any(word in query.lower() for word in ['what', 'where', 'help', 'support', 'available', 'options', 'need'])
-    
-    if asking_options:
-        logger.info("📋 User asking for available options")
-    
-    # If just general "help" or "need help" - show warm, complete response
-    if asking_options and not specific_service:
-        logger.info("💙 Showing warm support message with resources")
-        response = """Hey, I'm Sunny, and I'm here to support you. 💙 😊
+📞 **24/7 Helpline: 6389-2222**
+🚨 **Emergency: 6389-2222**
+📍 **Location: Buangkok Green Medical Park**
 
-**Immediate Help in Singapore:**
+**Services:**
+✓ Psychiatric care
+✓ Counseling
+✓ Crisis intervention
+✓ Inpatient & outpatient care
 
-📞 **SOS Hotline: 1767** (24/7, free)
-   - Talk to someone anytime
+Professional help is available anytime. 💙""",
+        'keywords': ['imh', 'institute of mental health', 'buangkok', 'psychiatric hospital']
+    },
+    'sos': {
+        'response': """**SOS (Samaritans of Singapore)** 📞
 
-🏥 **IMH Helpline: 6389-2222** (24/7)
-   - Institute of Mental Health
+**24/7 Hotline: 1767**
 
-💬 **CHAT: 6493-6500** (Ages 16-30)
-   - Free mental health check & support
+✓ Free, confidential emotional support
+✓ Talk to trained volunteers anytime
+✓ No judgment, just listening
 
-What would you like to know more about?"""
-        
-        state["messages"].append(response)
-        state["current_agent"] = "complete"
-        return state
-    
-    if specific_service:
-        # Provide specific service info with pre-written, warm responses
-        logger.info(f"💡 Providing specific info about: {specific_service}")
-        
-        # Pre-written responses for common services (warm and complete)
-        service_responses = {
-            'CHAT services': """**CHAT (Community Health Assessment Team)** 💙
+You're not alone. Call anytime you need to talk. 💙""",
+        'keywords': ['sos', 'samaritans', '1767', 'sos hotline', 'samaritans of singapore']
+    },
+    'chat': {
+        'response': """**CHAT (Community Health Assessment Team)** 💙
 
 For young people ages 16-30 in Singapore:
 
@@ -106,24 +72,10 @@ For young people ages 16-30 in Singapore:
 ✓ Referrals to specialists
 
 You're not alone. They're here to help.""",
-
-            'IMH services': """**Institute of Mental Health (IMH)** 🏥
-
-Singapore's specialist psychiatric hospital:
-
-📞 **24/7 Helpline: 6389-2222**
-🚨 **Emergency: 6389-2222**
-📍 **Location: Buangkok Green Medical Park**
-
-**Services:**
-✓ Psychiatric care
-✓ Counseling
-✓ Crisis intervention
-✓ Inpatient & outpatient care
-
-Professional help is available anytime.""",
-
-            'crisis hotlines': """**Crisis Hotlines in Singapore** 📞
+        'keywords': ['chat', 'chat services', 'community health assessment', 'scape', '6493-6500']
+    },
+    'hotline': {
+        'response': """**Crisis Hotlines in Singapore** 📞
 
 **Always Available (24/7):**
 
@@ -136,85 +88,158 @@ Professional help is available anytime.""",
 🚨 **Emergency: 999 or 995**
    - Life-threatening situations
 
-You don't have to face this alone. Please reach out."""
-        }
-        
-        # Use pre-written response if available, otherwise generate
-        if specific_service in service_responses:
-            response = service_responses[specific_service]
-        else:
-            # Get context with optional re-ranking
-            raw_context = get_relevant_context(f"Singapore {specific_service}", n_results=4)
-            
-            # Re-rank if available (improves relevance for Singapore services)
-            if RERANKER_AVAILABLE:
-                docs = [{"text": raw_context, "source": "knowledge_base"}]
-                reranked_docs = rerank_documents(
-                    query=f"Singapore {specific_service}",
-                    documents=docs,
-                    document_key="text"
-                )
-                resource_context = reranked_docs[0]["text"] if reranked_docs else raw_context
-                logger.debug("🔄 Re-ranking applied to resource context")
-            else:
-                resource_context = raw_context
-            
-            # Build Sunny-style prompt using shared utility
-            specific_instructions = f"""User needs {specific_service} in Singapore.
+You don't have to face this alone. Please reach out. 💙""",
+        'keywords': ['hotline', 'helpline', 'crisis line', 'emergency number', 'call']
+    },
+    'therapy': {
+        'response': """**Therapy & Counseling in Singapore** 🌟
 
-Provide this resource with your warm, supportive personality:
-• Service name with emoji - make it friendly
-• Contact number (clean, no asterisks)  
-• 1-2 key points about why it's helpful
-• Encouraging closing from a caring friend
+**Affordable Options:**
 
-Example Sunny style: "Hey! For counseling, I'd recommend [service] 🌟 at [number]. They're really understanding and have helped lots of people. You deserve support! 😊"
-"""
-            
-            prompt = build_sunny_prompt(
-                agent_type="resource",
-                context=resource_context,
-                specific_instructions=specific_instructions
-            )
-            
-            try:
-                # Generate deterministic seed for consistent resource responses
-                import hashlib
-                query_seed = int(hashlib.md5(query.lower().strip().encode()).hexdigest()[:8], 16)
-                
-                response = llm.invoke(
-                    prompt,
-                    config={"configurable": {"seed": query_seed}}
-                ).content.strip()
-            except Exception as e:
-                logger.error(f"LLM error: {e}", exc_info=True)
-                response = f"I can help you find {specific_service}. Let me know if you need specific contact information."
+💙 **CHAT (16-30): 6493-6500**
+   - Free counseling for youth
+
+🏥 **Polyclinics**
+   - Subsidized counseling referrals
+   - Call your nearest polyclinic
+
+💚 **Family Service Centres**
+   - Community-based support
+   - Sliding scale fees
+
+Need help finding a therapist? Let me know! 😊""",
+        'keywords': ['therapy', 'therapist', 'counseling', 'counselor', 'psychologist']
+    },
+    'general': {
+        'response': """**Mental Health Support in Singapore** 💙
+
+**Immediate Help (24/7):**
+📞 **SOS: 1767** - Emotional support
+📞 **IMH: 6389-2222** - Mental health care
+
+**Youth Support (16-30):**
+📞 **CHAT: 6493-6500** - Free screening & counseling
+
+**Professional Care:**
+🏥 **IMH** - Specialist psychiatric hospital
+💚 **Polyclinics** - Affordable counseling
+
+What kind of support are you looking for? 😊"""
+    }
+}
+
+
+def get_instant_answer(query: str) -> str:
+    """
+    Check if query matches a known service for instant response.
+    Returns pre-filled answer or empty string if no match.
+    """
+    query_lower = query.lower().strip()
+    
+    for service_id, service_data in KNOWN_SERVICES.items():
+        if service_id == 'general':
+            continue  # Skip general, use as fallback
         
+        keywords = service_data.get('keywords', [])
+        if any(keyword in query_lower for keyword in keywords):
+            logger.info(f"⚡ INSTANT ANSWER: Matched '{service_id}' (no LLM call)")
+            return service_data['response']
+    
+    return ""
+
+
+class AgentState(TypedDict):
+    current_query: str
+    messages: List[str]
+    current_agent: str
+    crisis_detected: bool
+    context: str
+
+
+def resource_agent_node(state: AgentState, llm: ChatGroq, get_relevant_context) -> AgentState:
+    """RAG-enhanced resource agent for Singapore services - OPTIMIZED."""
+    query = state["current_query"]
+    conversation_history = state.get("messages", [])
+    
+    logger.info("="*60)
+    logger.info("🏥 [RESOURCE AGENT ACTIVATED]")
+    logger.info(f"📝 Query: {query}")
+    logger.info("="*60)
+    
+    # ========================================================================
+    # OPTIMIZATION 1: Check for instant answers first (no LLM needed)
+    # ========================================================================
+    instant_answer = get_instant_answer(query)
+    if instant_answer:
+        logger.info("⚡ INSTANT ANSWER: Returning pre-filled response (no LLM call)")
+        state["messages"].append(instant_answer)
+        state["current_agent"] = "complete"
+        return state
+    
+    # ========================================================================
+    # OPTIMIZATION 2: Check if asking for general options
+    # ========================================================================
+    asking_options = any(word in query.lower() for word in ['what', 'where', 'help', 'support', 'available', 'options', 'need'])
+    
+    if asking_options:
+        logger.info("📋 General help request - showing overview")
+        response = KNOWN_SERVICES['general']['response']
         state["messages"].append(response)
         state["current_agent"] = "complete"
         return state
-        
-    elif asking_options and len(conversation_history) > 0:
-        # Show available services with Sunny's personality
-        logger.info("📋 Showing service list")
-        response = """Hey! I'm Sunny, and I'd love to help you find the right support 😊
-
-**Mental Health Support in Singapore:** 💙
-
-🔹 **SOS: 1767** - 24/7 emotional support
-🔹 **CHAT: 6493-6500** - Youth (16-30) 
-🔹 **IMH: 6389-2222** - Professional care
-
-Which one sounds right for you? I'm here to help! 💙"""
-        
-        state["messages"].append(response)
-        state["current_agent"] = "complete"
-        return state
-        
+    
+    # ========================================================================
+    # OPTIMIZATION 3: For unknown resources, use template approach
+    # ========================================================================
+    logger.info("🔍 Unknown resource - using template + minimal LLM")
+    
+    # Step 1: Retrieve context
+    raw_context = get_relevant_context(f"Singapore mental health {query}", n_results=3)
+    
+    # Step 2: Re-rank if available
+    if RERANKER_AVAILABLE:
+        docs = [{"text": raw_context, "source": "knowledge_base"}]
+        reranked_docs = rerank_documents(
+            query=f"Singapore {query}",
+            documents=docs,
+            document_key="text"
+        )
+        resource_context = reranked_docs[0]["text"] if reranked_docs else raw_context
+        logger.debug("🔄 Re-ranking applied")
     else:
-        # Ask for details with Sunny's warm personality
-        logger.info("💬 Asking user for more details")
-        response = "Hey, I'm Sunny! 😊 I can help you find support in Singapore. What kind of help are you looking for? 💙"
+        resource_context = raw_context
+    
+    # Step 3: Use LLM only to fill in template (MINIMAL PROMPT)
+    # Remove example responses, just ask for structured output
+    prompt = build_sunny_prompt(
+        agent_type="resource",
+        context=resource_context,
+        specific_instructions=f"""Fill in this template with Singapore resource info:
+
+**[Service Name]** [emoji]
+
+📞 **Contact: [number]**
+📍 **Location: [address if available]**
+
+**Key info:**
+✓ [1-2 key points only]
+
+Format exactly as shown. Be concise."""
+    )
+    
+    try:
+        import hashlib
+        query_seed = int(hashlib.md5(query.lower().strip().encode()).hexdigest()[:8], 16)
+        
+        response = llm.invoke(
+            prompt,
+            config={"configurable": {"seed": query_seed}}
+        ).content.strip()
+        
+    except Exception as e:
+        logger.error(f"LLM error: {e}", exc_info=True)
+        # Fallback to general info
+        response = KNOWN_SERVICES['general']['response']
     
     state["messages"].append(response)
     state["current_agent"] = "complete"

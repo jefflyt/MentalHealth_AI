@@ -12,8 +12,54 @@ import chromadb
 from chromadb.utils import embedding_functions
 from langgraph.graph import StateGraph, END
 from langchain_groq import ChatGroq
-from typing import TypedDict, List
+from langchain_chroma import Chroma
+from langchain_huggingface import HuggingFaceEmbeddings
+from typing import TypedDict, List, Dict, Any
 from dotenv import load_dotenv
+
+# Simple ConversationBufferMemory replacement (langchain 1.0+ removed memory module)
+class ConversationBufferMemory:
+    """Simple conversation memory to replace deprecated langchain.memory.ConversationBufferMemory"""
+    def __init__(self, memory_key="chat_history", return_messages=True, output_key="output"):
+        self.memory_key = memory_key
+        self.return_messages = return_messages
+        self.output_key = output_key
+        self.chat_history = []
+    
+    def save_context(self, inputs: Dict[str, Any], outputs: Dict[str, Any]):
+        """Save conversation context"""
+        user_message = {"type": "human", "content": inputs.get("input", "")}
+        ai_message = {"type": "ai", "content": outputs.get(self.output_key, "")}
+        self.chat_history.append(user_message)
+        self.chat_history.append(ai_message)
+    
+    def load_memory_variables(self, inputs: Dict[str, Any]) -> Dict[str, Any]:
+        """Load memory variables"""
+        if self.return_messages:
+            # Return as message objects
+            class Message:
+                def __init__(self, msg_type, content):
+                    self.type = msg_type
+                    self.content = content
+            
+            messages = [Message(msg["type"], msg["content"]) for msg in self.chat_history]
+            return {self.memory_key: messages}
+        else:
+            return {self.memory_key: self.chat_history}
+    
+    def clear(self):
+        """Clear conversation history"""
+        self.chat_history = []
+
+# Import chains and tools
+from chains import create_rag_chain, create_router_chain, create_crisis_detection_chain
+from tools import (
+    create_assessment_tool,
+    create_resource_finder_tool,
+    create_crisis_hotline_tool,
+    create_breathing_exercise_tool,
+    create_mood_tracker_tool
+)
 
 # Import modular agents
 from agent import (
@@ -28,9 +74,70 @@ from agent import (
 # Load environment variables
 load_dotenv()
 
-# Initialize ChromaDB
+# Initialize ChromaDB with LangChain Retriever
 chroma_client = chromadb.PersistentClient(path="./data/chroma_db")
-embedding_function = embedding_functions.DefaultEmbeddingFunction()
+
+# Initialize embeddings for Retriever
+embeddings = HuggingFaceEmbeddings(
+    model_name="sentence-transformers/all-MiniLM-L6-v2"
+)
+
+# Global retriever instance
+retriever = None
+
+# Global memory store for sessions (session_id -> memory)
+session_memories: Dict[str, ConversationBufferMemory] = {}
+
+# Global tools instances
+tools = {
+    "assessment": None,
+    "resource_finder": None,
+    "crisis_hotline": None,
+    "breathing": None,
+    "mood_tracker": None
+}
+
+# Global chains
+chains = {
+    "rag": None,
+    "router": None,
+    "crisis_detection": None
+}
+
+
+def get_or_create_memory(session_id: str = "default") -> ConversationBufferMemory:
+    """Get or create conversation memory for a session."""
+    if session_id not in session_memories:
+        session_memories[session_id] = ConversationBufferMemory(
+            memory_key="chat_history",
+            return_messages=True,
+            output_key="output"
+        )
+    return session_memories[session_id]
+
+
+def clear_session_memory(session_id: str = "default"):
+    """Clear conversation memory for a session."""
+    if session_id in session_memories:
+        session_memories[session_id].clear()
+        
+
+def get_conversation_history(session_id: str = "default") -> str:
+    """Get formatted conversation history."""
+    memory = get_or_create_memory(session_id)
+    history = memory.load_memory_variables({})
+    
+    messages = history.get("chat_history", [])
+    if not messages:
+        return "No previous conversation"
+    
+    # Format messages
+    formatted = []
+    for msg in messages:
+        role = "User" if msg.type == "human" else "AI"
+        formatted.append(f"{role}: {msg.content}")
+    
+    return "\n".join(formatted)
 
 class AgentState(TypedDict):
     current_query: str
@@ -41,6 +148,8 @@ class AgentState(TypedDict):
     distress_level: str  # 'high', 'mild', or 'none'
     last_menu_options: List[str]  # Track menu options for stateful turn tracking
     turn_count: int  # Track conversation turns
+    session_id: str  # Session identifier for memory
+    memory: ConversationBufferMemory  # Conversation memory instance
 
 # Initialize Groq LLM
 def get_llm():
@@ -66,47 +175,75 @@ llm = get_llm()
 
 # RAG Helper Functions
 def get_relevant_context(query: str, n_results: int = 3) -> str:
-    """Retrieve relevant context from ChromaDB for RAG."""
+    """Retrieve relevant context using LangChain Retriever."""
+    global retriever
+    
+    if retriever is None:
+        return "Retriever not initialized."
+    
     try:
-        collection = chroma_client.get_collection("mental_health_kb")
-        results = collection.query(
-            query_texts=[query],
-            n_results=n_results
-        )
+        # Use LangChain retriever (invoke method for compatibility)
+        docs = retriever.invoke(query)
         
-        if results and results['documents'] and results['documents'][0]:
-            # Combine retrieved documents
+        if docs:
+            # Format retrieved documents (limit to n_results)
             context_pieces = []
-            for i, doc in enumerate(results['documents'][0]):
-                metadata = results['metadatas'][0][i] if results['metadatas'] else {}
-                source = metadata.get('source', 'Knowledge Base')
-                context_pieces.append(f"[Source: {source}]\n{doc}")
+            for doc in docs[:n_results]:
+                source = doc.metadata.get('source', 'Knowledge Base')
+                context_pieces.append(f"[Source: {source}]\n{doc.page_content}")
             
             return "\n\n---\n\n".join(context_pieces)
         else:
             return "No specific information found in knowledge base."
     except Exception as e:
-        print(f"ChromaDB query error: {e}")
+        print(f"Retriever query error: {e}")
         return "Unable to retrieve context at this time."
 
 def initialize_chroma():
-    """Initialize ChromaDB with knowledge base documents."""
+    """Initialize ChromaDB with LangChain Retriever."""
+    global retriever, chains, tools
+    
     try:
-        # Try to get existing collection
-        collection = chroma_client.get_collection("mental_health_kb")
-        print("✅ ChromaDB collection already exists and loaded")
-        return collection
-    except:
-        # Create new collection and populate it
-        print("📚 Creating and populating ChromaDB collection...")
-        collection = chroma_client.create_collection(
-            name="mental_health_kb",
-            embedding_function=embedding_function
+        # Try to create LangChain Chroma retriever from existing collection
+        vectorstore = Chroma(
+            client=chroma_client,
+            collection_name="mental_health_kb",
+            embedding_function=embeddings
         )
+        
+        # Create retriever with search parameters
+        retriever = vectorstore.as_retriever(
+            search_type="similarity",
+            search_kwargs={"k": 3}
+        )
+        
+        print("✅ ChromaDB Retriever loaded from existing collection")
+        
+        # Initialize chains with retriever and LLM
+        chains["rag"] = create_rag_chain(retriever, llm)
+        chains["router"] = create_router_chain(llm)
+        chains["crisis_detection"] = create_crisis_detection_chain(llm)
+        print("✅ Chains initialized (RAG, Router, Crisis Detection)")
+        
+        # Initialize tools
+        tools["assessment"] = create_assessment_tool()
+        tools["resource_finder"] = create_resource_finder_tool()
+        tools["crisis_hotline"] = create_crisis_hotline_tool()
+        tools["breathing"] = create_breathing_exercise_tool()
+        tools["mood_tracker"] = create_mood_tracker_tool()
+        print("✅ Tools initialized (Assessment, Resource, Crisis, Breathing, Mood)")
+        
+        return vectorstore
+        
+    except Exception as e:
+        # Create new collection and populate it
+        print(f"📚 Creating new ChromaDB collection: {e}")
         
         # Load documents from knowledge directory
         knowledge_dir = "data/knowledge"
         documents = []
+        metadatas = []
+        ids = []
         
         if os.path.exists(knowledge_dir):
             for root, dirs, files in os.walk(knowledge_dir):
@@ -121,31 +258,54 @@ def initialize_chroma():
                             chunks = split_into_chunks(content, max_length=1000)
                             
                             for i, chunk in enumerate(chunks):
-                                documents.append({
-                                    'content': chunk,
+                                documents.append(chunk)
+                                metadatas.append({
                                     'source': file,
-                                    'chunk_id': f"{file}_{i}",
-                                    'category': os.path.basename(root)
+                                    'category': os.path.basename(root),
+                                    'chunk_id': f"{file}_{i}"
                                 })
+                                ids.append(f"{file}_{i}")
+                                
                         except Exception as e:
                             print(f"Error reading {file_path}: {e}")
         
-        # Add documents to ChromaDB
+        # Create vectorstore with documents
         if documents:
-            collection.add(
-                documents=[doc['content'] for doc in documents],
-                metadatas=[{
-                    'source': doc['source'], 
-                    'category': doc['category'],
-                    'chunk_id': doc['chunk_id']
-                } for doc in documents],
-                ids=[doc['chunk_id'] for doc in documents]
+            vectorstore = Chroma.from_texts(
+                texts=documents,
+                embedding=embeddings,
+                metadatas=metadatas,
+                ids=ids,
+                client=chroma_client,
+                collection_name="mental_health_kb"
             )
-            print(f"✅ Added {len(documents)} document chunks to ChromaDB")
+            
+            # Create retriever
+            retriever = vectorstore.as_retriever(
+                search_type="similarity",
+                search_kwargs={"k": 3}
+            )
+            
+            # Initialize chains
+            chains["rag"] = create_rag_chain(retriever, llm)
+            chains["router"] = create_router_chain(llm)
+            chains["crisis_detection"] = create_crisis_detection_chain(llm)
+            print("✅ Chains initialized")
+            
+            # Initialize tools
+            tools["assessment"] = create_assessment_tool()
+            tools["resource_finder"] = create_resource_finder_tool()
+            tools["crisis_hotline"] = create_crisis_hotline_tool()
+            tools["breathing"] = create_breathing_exercise_tool()
+            tools["mood_tracker"] = create_mood_tracker_tool()
+            print("✅ Tools initialized")
+            
+            print(f"✅ Created ChromaDB with {len(documents)} chunks, Retriever, Chains, and Tools")
         else:
             print("⚠️ No documents found in data directory")
+            vectorstore = None
         
-        return collection
+        return vectorstore
 
 def split_into_chunks(text: str, max_length: int = 1000) -> List[str]:
     """Split text into chunks for better retrieval."""
@@ -267,18 +427,18 @@ def main():
     # Check for data updates before initializing
     check_for_data_updates()
     
-    # Initialize ChromaDB
+    # Initialize ChromaDB with Retriever
     try:
-        collection = initialize_chroma()
-        print("✅ ChromaDB initialized successfully")
+        vectorstore = initialize_chroma()
+        print("✅ ChromaDB Retriever initialized successfully")
     except Exception as e:
         print(f"❌ ChromaDB initialization error: {e}")
         return
     
-    # Test RAG functionality
-    print("\n🔍 Testing RAG retrieval...")
+    # Test RAG functionality with Retriever
+    print("\n🔍 Testing Retriever...")
     test_context = get_relevant_context("CHAT services Singapore youth", n_results=2)
-    print("✅ RAG retrieval working")
+    print("✅ Retriever working")
     
     # Create workflow
     try:
@@ -292,6 +452,10 @@ def main():
     print("Type 'quit' to exit")
     print("-" * 60)
     
+    # Create session memory
+    session_id = "cli_session"
+    session_memory = get_or_create_memory(session_id)
+    
     while True:
         try:
             user_input = input("\n💭 How can I support your mental health today? ")
@@ -303,7 +467,7 @@ def main():
             if not user_input.strip():
                 continue
             
-            # Initialize state
+            # Initialize state with memory
             initial_state = {
                 "current_query": user_input,
                 "messages": [],
@@ -312,11 +476,21 @@ def main():
                 "context": "",
                 "distress_level": "none",
                 "last_menu_options": [],
-                "turn_count": 0
+                "turn_count": 0,
+                "session_id": session_id,
+                "memory": session_memory
             }
             
-            # Run the workflow with RAG
+            # Run the workflow with RAG and Memory
             result = app.invoke(initial_state)
+            
+            # Save interaction to memory
+            if result["messages"]:
+                response = "\n".join(result["messages"])
+                session_memory.save_context(
+                    {"input": user_input},
+                    {"output": response}
+                )
             
             # Display response
             print("\n🤖 AI Mental Health Agent:")
