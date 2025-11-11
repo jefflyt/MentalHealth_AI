@@ -242,8 +242,8 @@ MentalHealth_AI/
 
 ## 📊 System Stats
 
-- **Total Lines**: ~4,500+
-- **Agent Modules**: 8 files (including re-ranker)
+- **Total Lines**: ~10,500+
+- **Agent Modules**: 10 files (including re-ranker and helpers)
 - **Chains**: 4 (RAG, Conversation, Router, Crisis)
 - **Tools**: 5 (Assessment, Resources, Crisis, Breathing, Mood)
 - **Helper Functions**: 8 integration utilities

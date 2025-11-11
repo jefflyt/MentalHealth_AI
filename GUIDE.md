@@ -1874,7 +1874,7 @@ The system uses modern LangChain architecture with **Retriever**, **Chains**, **
 - ✅ Specialized tools for assessments, resources, and coping strategies
 - ✅ Context-aware responses
 
-### 2.1 Retriever Implementation
+### 3.1 Retriever Implementation
 
 **File:** `app.py`
 
@@ -1922,13 +1922,13 @@ for doc in docs:
 
 ---
 
-### 2.2 Chains
+### 3.2 Chains
 
 **Directory:** `chains/`
 
 Four specialized chains for different mental health support tasks.
 
-#### 2.2.1 RAG Chain
+#### 3.2.1 RAG Chain
 
 **File:** `chains/rag_chain.py`
 
@@ -1956,7 +1956,7 @@ response = rag_chain.invoke("What is anxiety?")
 User Query → Retriever → Format Docs → Prompt → LLM → Response
 ```
 
-#### 2.2.2 Conversation Chain
+#### 3.2.2 Conversation Chain
 
 **File:** `chains/conversation_chain.py`
 
@@ -1979,7 +1979,7 @@ conversation = create_conversation_chain(llm, memory)
 response = conversation.predict(input="I'm feeling anxious")
 ```
 
-#### 2.2.3 Router Chain
+#### 3.2.3 Router Chain
 
 **File:** `chains/router_chain.py`
 
@@ -2013,7 +2013,7 @@ else:
     return "GENERAL"
 ```
 
-#### 2.2.4 Crisis Detection Chain
+#### 3.2.4 Crisis Detection Chain
 
 **File:** `chains/crisis_chain.py`
 
@@ -2040,7 +2040,7 @@ level, confidence = assess_distress_level("I can't take this anymore", llm)
 
 ---
 
-### 2.3 Memory
+### 3.3 Memory
 
 **File:** `app.py`
 
@@ -2087,13 +2087,13 @@ print(history["chat_history"])
 
 ---
 
-### 2.4 Tools
+### 3.4 Tools
 
 **Directory:** `tools/`
 
 Five specialized LangChain tools for mental health support.
 
-#### 2.4.1 Assessment Tool
+#### 3.4.1 Assessment Tool
 
 **File:** `tools/assessment_tool.py`
 
@@ -2124,7 +2124,7 @@ print(result)
 - `stress` - Stress level (low/moderate/high)
 - `general` - General mental health check-in
 
-#### 2.4.2 Resource Finder Tool
+#### 3.4.2 Resource Finder Tool
 
 **File:** `tools/resource_tool.py`
 
@@ -2158,7 +2158,7 @@ print(resources)
 - `youth` - Youth-specific resources
 - `general` - General mental health resources
 
-#### 2.4.3 Crisis Hotline Tool
+#### 3.4.3 Crisis Hotline Tool
 
 **File:** `tools/crisis_tool.py`
 
@@ -2189,7 +2189,7 @@ print(hotlines)
 - `severe_distress` - Severe emotional distress
 - `general` - General crisis support
 
-#### 2.4.4 Breathing Exercise Tool
+#### 3.4.4 Breathing Exercise Tool
 
 **File:** `tools/breathing_tool.py`
 
@@ -2221,7 +2221,7 @@ print(exercise)
 - `calming` - Extended exhale for calm
 - `quick` - Quick calm for immediate relief
 
-#### 2.4.5 Mood Tracker Tool
+#### 3.4.5 Mood Tracker Tool
 
 **File:** `tools/mood_tool.py`
 
@@ -2266,6 +2266,8 @@ print(analysis)
 - `terrible` (1-2) - Very distressed
 
 ---
+
+### 3.5 Integration Patterns
 
 ### Integration with Agents
 
@@ -2348,7 +2350,7 @@ interface/web/
     └── index.html      # Chat UI
 ```
 
-### 2.1 Flask Application
+### 4.1 Flask Application
 
 **File:** `interface/web/app.py` (155 lines)
 
@@ -2415,7 +2417,7 @@ Health check endpoint
 }
 ```
 
-### 2.2 Frontend Features
+### 4.2 Frontend Features
 
 **Chat Interface:**
 - Modern gradient design (purple theme)
@@ -2439,7 +2441,7 @@ Health check endpoint
 - Server-side conversation storage
 - New conversation button
 
-### 2.3 Customization
+### 4.3 Customization
 
 #### Change Colors
 
@@ -2492,7 +2494,7 @@ def custom_function():
 - State persistence (`.update_state.json`)
 - CLI and Python API
 
-### 3.2 CLI Commands
+### 5.2 CLI Commands
 
 #### Check for Changes
 ```bash
@@ -2521,7 +2523,7 @@ Shows current ChromaDB state:
 - Files by category
 - Last update timestamp
 
-### 3.3 Python API
+### 5.3 Python API
 
 ```python
 from agent import UpdateAgent
@@ -2539,7 +2541,7 @@ if has_changes:
 agent.list_current_state()
 ```
 
-### 3.4 Knowledge Structure
+### 5.4 Knowledge Structure
 
 ```
 data/knowledge/
@@ -2639,7 +2641,7 @@ data/knowledge/
 - **User Experience:** More relevant, actionable guidance
 - **Coverage:** Now rivals professional mental health resources
 
-### 3.5 Adding New Knowledge
+### 5.5 Adding New Knowledge
 
 **Step 1:** Create file in appropriate category
 ```bash
@@ -2681,7 +2683,7 @@ Benefits:
 - Improves sleep quality
 ```
 
-### 3.6 Update State Tracking
+### 5.6 Update State Tracking
 
 **File:** `data/chroma_db/.update_state.json`
 
@@ -2708,7 +2710,7 @@ Benefits:
 - Counts total chunks
 - Enables incremental updates
 
-### 3.7 Web Scraping for Knowledge Updates
+### 5.7 Web Scraping for Knowledge Updates
 
 **File:** `scripts/web_scraper.py` (231 lines)
 
@@ -2765,7 +2767,7 @@ TRUSTED_SOURCES = {
 }
 ```
 
-### 3.8 Automated Periodic Updates
+### 5.8 Automated Periodic Updates
 
 **File:** `scripts/periodic_updater.py` (102 lines)
 
@@ -2839,7 +2841,7 @@ Create `~/Library/LaunchAgents/com.mentalhealth.updater.plist`:
 
 Load: `launchctl load ~/Library/LaunchAgents/com.mentalhealth.updater.plist`
 
-### 3.9 Complete Update Workflow
+### 5.9 Complete Update Workflow
 
 **Manual Update:**
 ```bash
@@ -3063,7 +3065,7 @@ The `scripts/` folder contains utility scripts for testing and maintenance:
    - **Purpose:** Sunny persona testing
    - **Function:** Validates personality consistency
 
-### 5.2 Adding New Agent
+### 7.2 Adding New Agent
 
 **Step 1:** Create agent file
 ```python
@@ -3137,7 +3139,7 @@ workflow.add_conditional_edges(
 workflow.add_edge("new_agent", END)
 ```
 
-### 5.3 Modifying Prompts
+### 7.3 Modifying Prompts
 
 Edit agent files directly. Example for Information Agent:
 
@@ -3165,7 +3167,7 @@ Guidelines:
 """
 ```
 
-### 5.3 Changing LLM
+### 7.4 Changing LLM
 
 **Current:** Groq Llama 3.3 70B
 
@@ -3194,7 +3196,7 @@ def get_llm():
     )
 ```
 
-### 5.4 Custom UI Themes
+### 7.5 Custom UI Themes
 
 **Dark Mode:**
 
@@ -3464,11 +3466,13 @@ All agent files use `_agent.py` suffix to avoid conflicts with Python standard l
 ### Line Counts
 
 ```
-Total: ~1,500 lines
-├── app.py: 315 lines
-├── Agent modules: 788 lines
+Total: ~10,500 lines
+├── app.py: 508 lines
+├── Agent modules: ~4,000 lines (10 files)
 ├── Web interface: 300+ lines
-└── Utilities: ~100 lines
+├── Chains: ~1,000 lines (4 files)
+├── Tools: ~1,000 lines (5 files)
+└── Utilities: ~3,000 lines
 ```
 
 ### Dependencies
