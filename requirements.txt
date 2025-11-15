@@ -25,6 +25,9 @@ typing-extensions>=4.8.0
 # Web Framework
 flask>=3.0.0
 
+# Production WSGI Server
+gunicorn>=21.2.0
+
 # Data Processing
 numpy>=1.24.0
 

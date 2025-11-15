@@ -105,6 +105,11 @@ def is_vague_response(message):
     return vague_count > 0 and len(message_lower) < 50
 
 @app.route('/')
+def main():
+    """Landing page about mental health."""
+    return render_template('main.html')
+
+@app.route('/index')
 def index():
     """Main chat interface."""
     # Create new session ID if not exists
@@ -620,15 +625,18 @@ def health_check():
 
 if __name__ == '__main__':
     # Run the Flask app
+    # Use PORT from environment variable (for Render deployment) or default to 5001
+    port = int(os.environ.get('PORT', 5001))
+    
     print("\n" + "="*60)
     print("🌐 AI Mental Health Support Agent - Web Interface")
     print("="*60)
-    print("📍 Starting server at http://localhost:5001")
+    print(f"📍 Starting server at http://0.0.0.0:{port}")
     print("🔧 Press CTRL+C to stop the server")
     print("="*60 + "\n")
     
     app.run(
         host='0.0.0.0',
-        port=5001,
-        debug=True
+        port=port,
+        debug=False  # Disable debug mode in production
     )

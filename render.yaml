@@ -1,0 +1,29 @@
+services:
+  - type: web
+    name: mentalhealth-ai-sunny
+    env: python
+    region: singapore
+    plan: starter
+    buildCommand: pip install --upgrade pip setuptools wheel && pip install -r requirements.txt
+    startCommand: gunicorn interface.web.app:app
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.9
+      - key: GROQ_API_KEY
+        sync: false
+      - key: HUGGINGFACE_API_TOKEN
+        sync: false
+      - key: FLASK_SECRET_KEY
+        generateValue: true
+      - key: RERANKER_ENABLED
+        value: true
+      - key: RERANKER_MODEL
+        value: cross-encoder/ms-marco-TinyBERT-L-2-v2
+      - key: RERANKER_THRESHOLD
+        value: "0.0"
+      - key: RERANKER_TOP_K
+        value: ""
+      - key: TOKENIZERS_PARALLELISM
+        value: "false"
+    healthCheckPath: /health
+    autoDeploy: true

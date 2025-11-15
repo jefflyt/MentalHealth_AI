@@ -10,188 +10,34 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
     <!-- Marked.js for Markdown parsing -->
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-    <style>
-        /* Chat-specific styles */
-        html, body {
-            height: 100%;
-            background-color: var(--bg-secondary);
-        }
-
-        #chat-tab {
-            height: 100vh;
-            display: flex;
-            flex-direction: column;
-            background: var(--bg-secondary);
-        }
-
-        .welcome-message {
-            text-align: center;
-            padding: 40px 20px;
-            color: var(--text-secondary);
-        }
-
-        .welcome-message h2 {
-            font-size: 24px;
-            margin-bottom: 15px;
-            color: var(--text-primary);
-        }
-
-        .welcome-message p {
-            font-size: 15px;
-            line-height: 1.6;
-            max-width: 500px;
-            margin: 0 auto;
-        }
-
-        .assessment-suggestion {
-            margin-top: 15px;
-            padding: 15px;
-            background: #f0f4ff;
-            border: 1px solid #c7d2fe;
-            border-radius: var(--radius-lg);
-        }
-
-        .assessment-suggestion h4 {
-            color: var(--primary-purple);
-            margin-bottom: 10px;
-            font-size: 16px;
-        }
-
-        .assessment-suggestion p {
-            color: var(--text-primary);
-            margin-bottom: 15px;
-            font-size: 14px;
-        }
-
-        .assessment-buttons {
-            display: flex;
-            gap: 10px;
-            flex-wrap: wrap;
-        }
-
-        .assessment-btn {
-            background: var(--primary-purple);
-            color: white;
-            border: none;
-            padding: 8px 16px;
-            border-radius: var(--radius-2xl);
-            font-size: 13px;
-            cursor: pointer;
-            transition: all var(--transition-base);
-        }
-
-        .assessment-btn:hover {
-            background: var(--primary-dark);
-            transform: translateY(-1px);
-        }
-
-        .assessment-btn.secondary {
-            background: var(--gray-600);
-        }
-
-        .assessment-btn.secondary:hover {
-            background: var(--gray-800);
-        }
-
-        .assessment-context-indicator {
-            background: var(--primary-light);
-            border: 1px solid rgba(102, 126, 234, 0.3);
-            border-radius: var(--radius-lg);
-            padding: var(--spacing-md) var(--spacing-lg);
-            margin: 10px 25px;
-            display: none;
-            align-items: center;
-            gap: 10px;
-            font-size: 13px;
-            color: var(--primary-purple);
-        }
-
-        .assessment-context-indicator.show {
-            display: flex;
-        }
-
-        .assessment-context-indicator .icon {
-            font-size: 16px;
-        }
-
-        .assessment-context-indicator .text {
-            flex: 1;
-        }
-
-        #send-btn {
-            background: var(--primary-gradient);
-            color: white;
-            border: none;
-            padding: 15px 30px;
-            border-radius: var(--radius-2xl);
-            font-size: 15px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all var(--transition-base);
-            white-space: nowrap;
-        }
-
-        #send-btn:hover:not(:disabled) {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
-        }
-
-        /* Mobile responsive overrides */
-        @media (max-width: 768px) {
-            .welcome-message {
-                padding: 30px 15px;
-            }
-
-            .welcome-message h2 {
-                font-size: 20px;
-            }
-
-            .welcome-message p {
-                font-size: 14px;
-            }
-
-            .assessment-context-indicator {
-                margin: 10px 20px;
-            }
-        }
-
-        @media (max-width: 480px) {
-            .assessment-context-indicator {
-                margin: 10px 15px;
-            }
-        }
-    </style>
 </head>
-<body>
-    <!-- Chat Tab Content -->
-    <div id="chat-tab" class="tab-content active">
-        <div class="crisis-banner" id="crisis-banner">
-            <span class="crisis-icon">🚨</span>
-            <span>Crisis support activated - Please reach out to emergency services if you're in immediate danger</span>
-        </div>
+<body class="chat-page">
+    <div class="crisis-banner" id="crisis-banner">
+        <span class="crisis-icon">🚨</span>
+        <span>Crisis support activated - Please reach out to emergency services if you're in immediate danger</span>
+    </div>
 
-        <div class="chat-container" id="chat-container">
-            <div class="welcome-message">
-                <h2>👋 Hi there! I'm Sunny</h2>
-                <p>I'm here to listen and support you. Feel free to share what's on your mind - whether it's about your feelings, daily challenges, or just needing someone to talk to. I'm here for you.</p>
-            </div>
+    <div class="chat-container" id="chat-container">
+        <div class="welcome-message">
+            <h2>👋 Hi there! I'm Sunny</h2>
+            <p>I'm here to listen and support you. Feel free to share what's on your mind - whether it's about your feelings, daily challenges, or just needing someone to talk to. I'm here for you.</p>
         </div>
+    </div>
 
-        <div class="assessment-context-indicator" id="assessment-context-indicator">
-            <span class="icon">🧠</span>
-            <span class="text" id="assessment-context-text">Assessment results available - Sunny can provide personalized support</span>
-        </div>
+    <div class="assessment-context-indicator" id="assessment-context-indicator">
+        <span class="icon">🧠</span>
+        <span class="text" id="assessment-context-text">Assessment results available - Sunny can provide personalized support</span>
+    </div>
 
-        <div class="input-container">
-            <input
-                type="text"
-                id="user-input"
-                class="input-field"
-                placeholder="Share what's on your mind..."
-                autocomplete="off"
-            >
-            <button id="send-btn" onclick="sendMessage()">Send</button>
-        </div>
+    <div class="input-container">
+        <input
+            type="text"
+            id="user-input"
+            class="input-field"
+            placeholder="Share what's on your mind..."
+            autocomplete="off"
+        >
+        <button id="send-btn" onclick="sendMessage()">Send</button>
     </div>
 
     <script>
