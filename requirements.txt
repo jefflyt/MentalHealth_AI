@@ -61,7 +61,7 @@ markdown>=3.4.0
 # Re-ranker Support (Removed for Render Deplpoyment)
 # NOW ENABLED: Using Python 3.11 with compatible dependencies
 # Requires numpy<2 for PyTorch compatibility
-# sentence-transformers>=2.2.0
+sentence-transformers>=2.2.0
 # torch>=2.0.0
 # numpy<2
 
