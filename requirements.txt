@@ -1,6 +1,10 @@
 # CHROMADB COMPATIBLE - Works with Python 3.11
 # This version uses ChromaDB with all-MiniLM-L6-v2 with PyTorch support for re-ranker
 
+# Build dependencies
+setuptools>=68.0.0
+wheel>=0.41.0
+
 # Core LangGraph and LangChain
 langgraph>=0.0.55
 langchain>=1.0.3
