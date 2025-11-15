@@ -5,6 +5,7 @@ A multi-agent system using LangGraph and ChromaDB for knowledge-grounded respons
 """
 
 import os
+
 # Disable tokenizers parallelism warning for forked processes
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
@@ -16,6 +17,7 @@ from langchain_chroma import Chroma
 from langchain_huggingface import HuggingFaceEmbeddings
 from typing import TypedDict, List, Dict, Any
 from dotenv import load_dotenv
+
 
 # Simple ConversationBufferMemory replacement (langchain 1.0+ removed memory module)
 class ConversationBufferMemory:
