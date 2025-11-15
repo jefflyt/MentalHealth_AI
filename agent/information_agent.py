@@ -3,10 +3,11 @@ Information Agent - Mental health education with evidence-based knowledge
 """
 
 from typing import TypedDict, List
+import os
 from langchain_groq import ChatGroq
 from .sunny_persona import get_sunny_persona, get_distress_responses, build_sunny_prompt
 
-# Optional re-ranker import (gracefully handles if not installed)
+# Optional re-ranker import (can be disabled via env)
 try:
     from .reranker import rerank_documents
     RERANKER_AVAILABLE = True
@@ -15,6 +16,11 @@ except ImportError:
     def rerank_documents(query, documents, **kwargs):
         """Fallback when re-ranker not available"""
         return documents
+
+# Final toggle: only use if both available AND explicitly enabled
+USE_RERANKER = (
+    os.getenv("RERANKER_ENABLED", "false").lower() == "true"
+) and RERANKER_AVAILABLE
 
 
 # ============================================================================
@@ -266,8 +272,8 @@ What's on your mind today?"""
         # Get context with optional re-ranking
         raw_context = get_relevant_context(selected_service['topic'], n_results=4)
         
-        # Re-rank if available (improves relevance)
-        if RERANKER_AVAILABLE:
+        # Re-rank if enabled
+        if USE_RERANKER:
             # Convert context string to document list for re-ranking
             docs = [{"text": raw_context, "source": "knowledge_base"}]
             reranked_docs = rerank_documents(

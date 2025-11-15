@@ -6,11 +6,12 @@ from typing import TypedDict, List
 from langchain_groq import ChatGroq
 from .sunny_persona import build_sunny_prompt
 import logging
+import os
 
 # Configure logger
 logger = logging.getLogger(__name__)
 
-# Optional re-ranker import (gracefully handles if not installed)
+# Optional re-ranker import (can be disabled via env)
 try:
     from .reranker import rerank_documents
     RERANKER_AVAILABLE = True
@@ -19,6 +20,11 @@ except ImportError:
     def rerank_documents(query, documents, **kwargs):
         """Fallback when re-ranker not available"""
         return documents
+
+# Final toggle: only use if both available AND explicitly enabled
+USE_RERANKER = (
+    os.getenv("RERANKER_ENABLED", "false").lower() == "true"
+) and RERANKER_AVAILABLE
 
 
 # ============================================================================
@@ -196,8 +202,8 @@ def resource_agent_node(state: AgentState, llm: ChatGroq, get_relevant_context) 
     # Step 1: Retrieve context
     raw_context = get_relevant_context(f"Singapore mental health {query}", n_results=3)
     
-    # Step 2: Re-rank if available
-    if RERANKER_AVAILABLE:
+    # Step 2: Re-rank if enabled
+    if USE_RERANKER:
         docs = [{"text": raw_context, "source": "knowledge_base"}]
         reranked_docs = rerank_documents(
             query=f"Singapore {query}",
