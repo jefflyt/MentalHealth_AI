@@ -14,12 +14,11 @@ from chromadb.utils import embedding_functions
 from langgraph.graph import StateGraph, END
 from langchain_groq import ChatGroq
 from langchain_chroma import Chroma
-from langchain_huggingface import HuggingFaceEmbeddings
 from typing import TypedDict, List, Dict, Any
 from dotenv import load_dotenv
 
 
-# Simple ConversationBufferMemory replacement (langchain 1.0+ removed memory module)
+# Simple ConversationBufferMemory replacement (langchaibbn 1.0+ removed memory module)
 class ConversationBufferMemory:
     """Simple conversation memory to replace deprecated langchain.memory.ConversationBufferMemory"""
     def __init__(self, memory_key="chat_history", return_messages=True, output_key="output"):
@@ -79,10 +78,48 @@ load_dotenv()
 # Initialize ChromaDB with LangChain Retriever
 chroma_client = chromadb.PersistentClient(path="./data/chroma_db")
 
-# Initialize embeddings for Retriever
-embeddings = HuggingFaceEmbeddings(
-    model_name="sentence-transformers/all-MiniLM-L6-v2"
-)
+# Embeddings: use remote Hugging Face Hub embeddings by default to avoid local torch/PyTorch load
+# Set USE_REMOTE_EMBEDDINGS=true (default) and provide HUGGINGFACE_API_TOKEN in env.
+# To disable reranker/torch entirely set RERANKER_ENABLED=false in env.
+embeddings = None
+
+def get_embeddings():
+    """Lazily return an embeddings object.
+
+    Uses HuggingFace Hub remote embeddings (no local torch) when
+    `USE_REMOTE_EMBEDDINGS` is true (default). Requires `HUGGINGFACE_API_TOKEN`.
+    If `RERANKER_ENABLED=false` the function returns None to avoid loading any heavy models.
+    """
+    global embeddings
+    if embeddings is not None:
+        return embeddings
+
+    reranker_enabled = os.getenv("RERANKER_ENABLED", "false").lower() not in ("0", "false", "no")
+    use_remote = os.getenv("USE_REMOTE_EMBEDDINGS", "true").lower() in ("1", "true", "yes")
+
+    if not reranker_enabled:
+        # Explicitly avoid initializing any local/pytorch models when reranker disabled
+        print("⚠️  RERANKER_ENABLED=false -> skipping local embedding initialization.")
+        embeddings = None
+        return embeddings
+
+    if use_remote:
+        hf_token = os.getenv("HUGGINGFACE_API_TOKEN")
+        if not hf_token:
+            raise RuntimeError("HUGGINGFACE_API_TOKEN is required for remote HuggingFace embeddings")
+        # Import lazily to avoid heavy imports at module load
+        from langchain.embeddings.huggingface_hub import HuggingFaceHubEmbeddings
+        embeddings = HuggingFaceHubEmbeddings(
+            repo_id="sentence-transformers/all-MiniLM-L6-v2",
+            huggingfacehub_api_token=hf_token
+        )
+        print("✅ Using remote HuggingFace Hub embeddings (all-MiniLM-L6-v2)")
+        return embeddings
+
+    # If remote is disabled, do not auto-load local transformer (avoids OOM). User can change env.
+    print("⚠️ USE_REMOTE_EMBEDDINGS is false — local embeddings will not be initialized automatically.")
+    embeddings = None
+    return embeddings
 
 # Global retriever instance
 retriever = None
@@ -207,10 +244,11 @@ def initialize_chroma():
     
     try:
         # Try to create LangChain Chroma retriever from existing collection
+        emb = get_embeddings()
         vectorstore = Chroma(
             client=chroma_client,
             collection_name="mental_health_kb",
-            embedding_function=embeddings
+            embedding_function=emb
         )
         
         # Create retriever with search parameters
@@ -273,14 +311,20 @@ def initialize_chroma():
         
         # Create vectorstore with documents
         if documents:
-            vectorstore = Chroma.from_texts(
-                texts=documents,
-                embedding=embeddings,
-                metadatas=metadatas,
-                ids=ids,
-                client=chroma_client,
-                collection_name="mental_health_kb"
-            )
+            emb = get_embeddings()
+            if emb is None:
+                print("⚠️  Embeddings not available; cannot create vectorstore from texts. "
+                      "Set RERANKER_ENABLED=true or enable USE_REMOTE_EMBEDDINGS.")
+                vectorstore = None
+            else:
+                vectorstore = Chroma.from_texts(
+                    texts=documents,
+                    embedding=emb,
+                    metadatas=metadatas,
+                    ids=ids,
+                    client=chroma_client,
+                    collection_name="mental_health_kb"
+                )
             
             # Create retriever
             retriever = vectorstore.as_retriever(
