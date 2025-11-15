@@ -4,30 +4,25 @@ Get the AI Mental Health Support Agent running in 5 minutes!
 
 ## 🎯 Prerequisites
 
-- **Python 3.9-3.13** (3.13 is compatible!)
+- **Miniconda/Anaconda (recommended)** – the included `activate_env.sh` script uses `conda` to manage a `mentalhealth_py311` environment with Python 3.11.13 so that `torch>=2.0.0` installs correctly
+- **Python 3.11.13** (installed automatically by the script)
 - **Git** (for cloning)
 - **Groq API Key** ([Get one free](https://console.groq.com/))
 
 ## 🚀 3-Step Setup
 
-### Step 1: Install Dependencies
+### Step 1: Prepare the Python 3.11 Environment
 
 ```bash
 # Clone the repository (if not already)
 git clone <your-repo-url>
 cd MentalHealth_AI
 
-# Create virtual environment
-python3 -m venv venv
-
-# Activate virtual environment
-source venv/bin/activate  # macOS/Linux
-# OR
-venv\Scripts\activate     # Windows
-
-# Install dependencies
-pip install -r requirements.txt
+# Run the helper script (creates + activates conda env, installs requirements)
+source activate_env.sh
 ```
+
+If you prefer not to use `activate_env.sh`, you can still create a Python 3.11 virtual environment manually, but make sure `torch>=2.0.0` and `sentence-transformers>=2.2.0` install on that interpreter.
 
 ### Step 2: Configure API Key
 

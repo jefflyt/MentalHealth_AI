@@ -402,8 +402,8 @@ Try these in the web interface:
 
 ## 🚀 Getting Started
 
-1. **Read [QUICKSTART.md](QUICKSTART.md)** - 5-minute setup
-2. **Activate environment**: `conda activate mentalhealth_py311` or `source activate_env.sh`
+1. **Read [QUICKSTART.md](QUICKSTART.md)** to understand the workflow
+2. **Prepare the Python 3.11 environment**: run `source activate_env.sh` to create/activate `mentalhealth_py311` (Python 3.11.13), install `requirements.txt`, and ensure PyTorch + sentence-transformers are available
 3. **Start the app**: `python run_web.py`
 4. **Open browser**: http://localhost:5001
 5. **Start chatting!**
