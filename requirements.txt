@@ -1,9 +1,5 @@
-# CHROMADB COMPATIBLE - Works with Python 3.11
-# This version uses ChromaDB with all-MiniLM-L6-v2 with PyTorch support for re-ranker
-
-# Build dependencies
-setuptools>=68.0.0
-wheel>=0.41.0
+# CHROMADB COMPATIBLE - Works with Python 3.11+
+# Remote embeddings mode (default) - no local PyTorch required
 
 # Core LangGraph and LangChain
 langgraph>=0.0.55
@@ -11,7 +7,6 @@ langchain>=1.0.3
 langchain-core>=1.0.0
 langchain-community>=0.4.1
 langchain-groq>=1.0.0
-langchain-text-splitters>=0.0.1
 langchain-chroma>=1.0.0
 langchain-huggingface>=1.0.1
 
@@ -42,28 +37,13 @@ lxml>=4.9.0
 schedule>=1.2.0
 
 # Multi-Format File Support (Optional - for enhanced knowledge base)
-# Install with: pip install -r requirements.txt
-# Or selectively: pip install PyPDF2 python-docx pandas openpyxl markdown
-
-# PDF Support
+# These are used by agent/update_agent.py for parsing different file types
 PyPDF2>=3.0.0
-
-# Word Document Support
 python-docx>=1.0.0
-
-# CSV/Excel Support
 pandas>=2.0.0
-openpyxl>=3.0.0
 
-# Markdown Support (enhanced parsing)
-markdown>=3.4.0
-
-# Re-ranker Support (Removed for Render Deplpoyment)
-# NOW ENABLED: Using Python 3.11 with compatible dependencies
-# Requires numpy<2 for PyTorch compatibility
-sentence-transformers>=2.2.0
-torch>=2.0.0
-# numpy<2
-
-# Testing
-pytest>=7.4.0
+# Re-ranker Support (OPTIONAL - Disabled by default)
+# Uncomment these lines if you want to enable local re-ranker (RERANKER_ENABLED=true)
+# Requires Python 3.11 and significant memory (~2GB)
+# sentence-transformers>=2.2.0
+# torch>=2.0.0

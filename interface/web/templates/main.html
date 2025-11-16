@@ -461,21 +461,19 @@
 
         /* Emergency Banner - Clear & Accessible */
 
-        /* Emergency Support Banner - Prominent and Accessible */
+        /* Emergency Support Banner - Full Width Banner */
         .emergency-banner {
             background: linear-gradient(135deg, #DC2626 0%, #991B1B 100%);
             color: white;
-            padding: 36px 32px;
+            padding: 48px 30px;
             text-align: center;
-            border-radius: 20px;
-            box-shadow: 0 12px 40px rgba(220, 38, 38, 0.25);
-            margin: 0 30px 60px 30px;
-            max-width: 1200px;
-            margin-left: auto;
-            margin-right: auto;
+            box-shadow: 0 8px 32px rgba(220, 38, 38, 0.3);
+            margin: 0;
+            width: 100%;
             position: relative;
             overflow: hidden;
-            border: 2px solid rgba(255, 255, 255, 0.15);
+            border-top: 3px solid rgba(255, 255, 255, 0.2);
+            border-bottom: 3px solid rgba(153, 27, 27, 0.5);
         }
 
         /* Subtle pulse animation for urgency */
@@ -516,6 +514,59 @@
         @keyframes emergencyIconPulse {
             0%, 100% { transform: scale(1); }
             50% { transform: scale(1.2); }
+        }
+
+        .emergency-text {
+            font-size: 32px;
+            font-weight: 700;
+            margin-bottom: 24px;
+            position: relative;
+            z-index: 1;
+            text-shadow: 0 2px 12px rgba(0, 0, 0, 0.3);
+            letter-spacing: 0.5px;
+        }
+
+        .emergency-contacts {
+            display: flex;
+            gap: 40px;
+            justify-content: center;
+            align-items: center;
+            flex-wrap: wrap;
+            position: relative;
+            z-index: 1;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .emergency-contact {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            padding: 16px 28px;
+            background: rgba(255, 255, 255, 0.15);
+            border-radius: 12px;
+            backdrop-filter: blur(10px);
+            transition: all 0.3s ease;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .emergency-contact:hover {
+            background: rgba(255, 255, 255, 0.25);
+            transform: translateY(-4px);
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+        }
+
+        .emergency-contact span {
+            font-size: 16px;
+            opacity: 0.95;
+            font-weight: 500;
+        }
+
+        .emergency-contact a {
+            font-size: 24px;
+            font-weight: 700;
+            letter-spacing: 1px;
+            text-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
         }
 
         .emergency-banner p {
