@@ -26,7 +26,7 @@ load_dotenv()
 
 # Initialize Flask app
 app = Flask(__name__)
-app.secret_key = os.getenv('FLASK_SECRET_KEY', 'your-secret-key-change-in-production')
+app.secret_key = os.getenv('FLASK_SECRET_KEY')
 
 # Initialize the agent workflow
 print("🔧 Initializing AI Mental Health Agent...")
