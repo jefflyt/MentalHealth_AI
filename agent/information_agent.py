@@ -18,9 +18,12 @@ except ImportError:
         return documents
 
 # Final toggle: only use if both available AND explicitly enabled
+# DEFAULT: DISABLED for performance on Render free tier
 USE_RERANKER = (
     os.getenv("RERANKER_ENABLED", "false").lower() == "true"
 ) and RERANKER_AVAILABLE
+
+print(f"🔧 Reranker status: {'ENABLED' if USE_RERANKER else 'DISABLED'}")
 
 
 # ============================================================================

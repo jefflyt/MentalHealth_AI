@@ -100,11 +100,11 @@ def get_embeddings():
     
     # Use HuggingFace Inference API (remote only - no local model downloads)
     embeddings = HuggingFaceEndpointEmbeddings(
-        model="sentence-transformers/all-MiniLM-L6-v2",
+        model="BAAI/bge-small-en-v1.5",
         task="feature-extraction",
         huggingfacehub_api_token=hf_token,
     )
-    print("✅ Using remote HuggingFace API embeddings (sentence-transformers/all-MiniLM-L6-v2)")
+    print("✅ Using remote HuggingFace API embeddings (BAAI/bge-small-en-v1.5)")
     print("   No local models - embeddings run via HuggingFace Inference API")
     return embeddings
 
@@ -341,7 +341,8 @@ def initialize_chroma():
                                 content = f.read()
                                 
                             # Split into chunks for better retrieval
-                            chunks = split_into_chunks(content, max_length=1000)
+                            # Optimized: 700 char chunks with 75 char overlap
+                            chunks = split_into_chunks(content, max_length=700)
                             
                             for i, chunk in enumerate(chunks):
                                 documents.append(chunk)
@@ -397,8 +398,17 @@ def initialize_chroma():
         
         return vectorstore
 
-def split_into_chunks(text: str, max_length: int = 1000) -> List[str]:
-    """Split text into chunks for better retrieval."""
+def split_into_chunks(text: str, max_length: int = 700, overlap: int = 75) -> List[str]:
+    """Split text into chunks for better retrieval with overlap.
+    
+    Args:
+        text: Text to split
+        max_length: Maximum chunk size in characters (default 700)
+        overlap: Character overlap between chunks (default 75)
+    
+    Returns:
+        List of text chunks with overlap
+    """
     paragraphs = text.split('\n\n')
     chunks = []
     current_chunk = ""
@@ -408,8 +418,15 @@ def split_into_chunks(text: str, max_length: int = 1000) -> List[str]:
             current_chunk += paragraph + "\n\n"
         else:
             if current_chunk:
-                chunks.append(current_chunk.strip())
-            current_chunk = paragraph + "\n\n"
+                chunk_text = current_chunk.strip()
+                chunks.append(chunk_text)
+                # Add overlap from end of previous chunk
+                if len(chunk_text) > overlap:
+                    current_chunk = chunk_text[-overlap:] + "\n\n" + paragraph + "\n\n"
+                else:
+                    current_chunk = paragraph + "\n\n"
+            else:
+                current_chunk = paragraph + "\n\n"
     
     if current_chunk:
         chunks.append(current_chunk.strip())
