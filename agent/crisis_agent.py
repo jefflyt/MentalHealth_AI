@@ -28,8 +28,8 @@ def crisis_intervention_node(state: AgentState, llm: ChatGroq, get_relevant_cont
     
     query = state["current_query"]
     
-    # Get crisis intervention context
-    crisis_context = get_relevant_context(f"crisis intervention emergency protocols {query}", n_results=3)
+    # Get crisis intervention context (optimized for speed)
+    crisis_context = get_relevant_context(f"crisis intervention emergency protocols {query}", n_results=2)
     
     crisis_prompt = build_sunny_prompt(
         agent_type='crisis',

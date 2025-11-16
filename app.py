@@ -204,8 +204,8 @@ def generate_query_seed(query: str) -> int:
 llm = get_llm()
 
 # RAG Helper Functions
-def get_relevant_context(query: str, n_results: int = 3) -> str:
-    """Retrieve relevant context using LangChain Retriever."""
+def get_relevant_context(query: str, n_results: int = 2) -> str:
+    """Retrieve relevant context using LangChain Retriever (optimized)."""
     global retriever
     
     if retriever is None:
@@ -252,10 +252,10 @@ def initialize_chroma():
             persist_directory="./data/chroma_db"
         )
         
-        # Create retriever with search parameters
+        # Create retriever with search parameters (optimized for speed)
         retriever = vectorstore.as_retriever(
             search_type="similarity",
-            search_kwargs={"k": 3}
+            search_kwargs={"k": 2}  # Reduced from 3 to 2 for faster queries
         )
         
         print("✅ ChromaDB Retriever loaded from existing collection")

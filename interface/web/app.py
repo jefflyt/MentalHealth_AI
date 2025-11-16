@@ -14,6 +14,7 @@ import sys
 from datetime import datetime
 from dotenv import load_dotenv
 import uuid
+import time
 
 # Add parent directory to path to import agent system
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../..'))
@@ -123,7 +124,9 @@ def index():
 
 @app.route('/chat', methods=['POST'])
 def chat():
-    """Handle chat messages."""
+    """Handle chat messages with performance logging."""
+    start_time = time.time()
+    
     try:
         data = request.get_json()
         user_message = data.get('message', '').strip()
@@ -131,7 +134,7 @@ def chat():
         if not user_message:
             return jsonify({'error': 'Empty message'}), 400
         
-        print(f"\n📝 User query: {user_message}")  # Debug log
+        app.logger.info(f"📨 User message: {user_message}")
         
         # Get or create session
         session_id = session.get('session_id', str(uuid.uuid4()))
@@ -200,8 +203,10 @@ def chat():
             turn_count=0
         )
         
-        # Run the workflow
+        # Run the workflow and measure time
+        workflow_start = time.time()
         result = workflow.invoke(initial_state)
+        workflow_duration = time.time() - workflow_start
         
         # Extract agent response
         agent_messages = result.get('messages', [])
@@ -221,6 +226,12 @@ def chat():
             'crisis': crisis_detected
         })
         
+        # Calculate total duration
+        total_duration = time.time() - start_time
+        
+        # Log performance metrics
+        app.logger.info(f"⏱️  Workflow duration: {workflow_duration:.2f}s | Total request duration: {total_duration:.2f}s")
+        
         return jsonify({
             'response': agent_response,
             'crisis': crisis_detected,
@@ -228,7 +239,8 @@ def chat():
         })
         
     except Exception as e:
-        print(f"Error in chat: {e}")
+        total_duration = time.time() - start_time
+        app.logger.error(f"❌ Error in chat after {total_duration:.2f}s: {e}")
         import traceback
         traceback.print_exc()  # Full error trace
         return jsonify({

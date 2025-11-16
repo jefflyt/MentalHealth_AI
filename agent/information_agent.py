@@ -160,20 +160,20 @@ def information_agent_node(state: AgentState, llm: ChatGroq, get_relevant_contex
     print("="*60)
     
     # ========================================================================
-    # OPTIMIZATION 1: Check cached answers first (instant response, no LLM)
+    # OPTIMIZATION 1: Check cached answers first (instant response, no LLM/DB)
     # ========================================================================
     cached_answer = get_cached_answer(query)
     if cached_answer and distress_level == 'none':
-        print("⚡ CACHED ANSWER: Returning instant response (no LLM call)")
+        print("⚡ CACHED ANSWER: Returning instant response (no LLM/DB calls)")
         state["messages"].append(cached_answer)
         state["current_agent"] = "complete"
         return state
     
     # ========================================================================
-    # OPTIMIZATION 2: Off-topic detection (skip LLM for unrelated queries)
+    # OPTIMIZATION 2: Off-topic detection (skip LLM/DB for unrelated queries)
     # ========================================================================
     if is_off_topic(query) and distress_level == 'none':
-        print("🚫 OFF-TOPIC DETECTED: Returning redirect (no LLM call)")
+        print("🚫 OFF-TOPIC DETECTED: Returning redirect (no LLM/DB calls)")
         state["messages"].append(sunny['redirect_template'])
         state["current_agent"] = "complete"
         return state
@@ -269,8 +269,8 @@ What's on your mind today?"""
         # User selected a service - provide relevant info
         print(f"💡 Providing info about: {selected_service['topic']}")
         
-        # Get context with optional re-ranking
-        raw_context = get_relevant_context(selected_service['topic'], n_results=4)
+        # Get context with optional re-ranking (optimized for speed)
+        raw_context = get_relevant_context(selected_service['topic'], n_results=2)
         
         # Re-rank if enabled
         if USE_RERANKER:

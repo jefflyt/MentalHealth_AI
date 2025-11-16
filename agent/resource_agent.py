@@ -200,7 +200,8 @@ def resource_agent_node(state: AgentState, llm: ChatGroq, get_relevant_context) 
     logger.info("🔍 Unknown resource - using template + minimal LLM")
     
     # Step 1: Retrieve context
-    raw_context = get_relevant_context(f"Singapore mental health {query}", n_results=3)
+    # Get relevant resources from knowledge base (optimized for speed)
+    raw_context = get_relevant_context(f"Singapore mental health {query}", n_results=2)
     
     # Step 2: Re-rank if enabled
     if USE_RERANKER:

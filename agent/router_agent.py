@@ -481,16 +481,9 @@ def router_node(state: AgentState, llm: ChatGroq, get_relevant_context) -> Agent
     if routing_result['crisis_detected']:
         state["messages"].append("🚨 I'm here with you right now - getting you immediate support")
     
-    # Get context only if needed (not for crisis or menu replies)
-    if routing_result['agent'] not in ['crisis_intervention'] and not detect_menu_reply(query, state.get("last_menu_options", [])):
-        existing_context = state.get("context", "")
-        routing_context = get_relevant_context(f"route classify {query}", n_results=2)
-        
-        # Preserve existing context if present
-        if existing_context:
-            state["context"] = existing_context + "\n\n" + routing_context
-        else:
-            state["context"] = routing_context
+    # OPTIMIZATION: Router does NOT need context - let individual agents fetch what they need
+    # This saves expensive ChromaDB queries on every message
+    # Context fetching is now delegated to each specialized agent
     
     logger.info(f"✅ Routed to: {state['current_agent'].upper()} Agent")
     if routing_result['distress_level'] != 'none':
