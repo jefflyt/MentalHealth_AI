@@ -17,8 +17,6 @@ from langchain_chroma import Chroma
 from typing import TypedDict, List, Dict, Any
 from dotenv import load_dotenv
 
-from interface.web.app import app
-
 # Simple ConversationBufferMemory replacement (langchaibbn 1.0+ removed memory module)
 class ConversationBufferMemory:
     """Simple conversation memory to replace deprecated langchain.memory.ConversationBufferMemory"""

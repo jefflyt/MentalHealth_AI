@@ -8,7 +8,6 @@ import os
 # Disable tokenizers parallelism warning for forked processes
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
-from interface.web.app import app  # imports the Flask instance from interface/web/app.py
 from flask import Flask, render_template, request, jsonify, session
 import sys
 from datetime import datetime
