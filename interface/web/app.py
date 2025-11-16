@@ -23,6 +23,8 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../..'))
 from app import create_workflow, initialize_chroma, check_for_data_updates
 from app import AgentState
 
+from interface.web.app import app  # imports the Flask instance from interface/web/app.py
+
 # Load environment
 load_dotenv()
 
