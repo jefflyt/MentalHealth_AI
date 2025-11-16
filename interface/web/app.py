@@ -5,11 +5,10 @@ Provides a user-friendly web GUI for interacting with the multi-agent system
 """
 
 import os
-
-import interface
 # Disable tokenizers parallelism warning for forked processes
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
+from interface.web.app import app  # imports the Flask instance from interface/web/app.py
 from flask import Flask, render_template, request, jsonify, session
 import sys
 from datetime import datetime
@@ -23,15 +22,12 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../..'))
 from app import create_workflow, initialize_chroma, check_for_data_updates
 from app import AgentState
 
-from interface.web.app import app  # imports the Flask instance from interface/web/app.py
-
 # Load environment
 load_dotenv()
 
 # Initialize Flask app
 app = Flask(__name__)
 app.secret_key = os.getenv('FLASK_SECRET_KEY', 'your-secret-key-change-in-production')
-
 
 # Initialize the agent workflow
 print("🔧 Initializing AI Mental Health Agent...")
