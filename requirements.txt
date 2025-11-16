@@ -1,5 +1,5 @@
 # CHROMADB COMPATIBLE - Works with Python 3.11+
-# Remote embeddings mode (default) - no local PyTorch required
+# Remote embeddings mode ONLY - NO local PyTorch/ONNX models
 
 # Core LangGraph and LangChain
 langgraph>=0.0.55
@@ -8,12 +8,15 @@ langchain-core>=1.0.0
 langchain-community>=0.4.1
 langchain-groq>=1.0.0
 langchain-chroma>=1.0.0
-langchain-huggingface>=1.0.1
+
+# Remote embeddings via HuggingFace Inference API (NO local models)
+langchain-huggingface>=0.1.0
+huggingface-hub>=0.20.0
 
 # LLM and API clients
 groq>=0.4.2
 
-# Vector Database with compatible embeddings
+# Vector Database (acts as storage only, NO built-in embeddings)
 chromadb>=0.4.22
 
 # Essential utilities
@@ -42,8 +45,8 @@ PyPDF2>=3.0.0
 python-docx>=1.0.0
 pandas>=2.0.0
 
-# Re-ranker Support (OPTIONAL - Disabled by default)
-# Uncomment these lines if you want to enable local re-ranker (RERANKER_ENABLED=true)
-# Requires Python 3.11 and significant memory (~2GB)
+# Re-ranker Support - DISABLED by default to prevent local model downloads
+# DO NOT UNCOMMENT unless you have sufficient RAM (2GB+) and set RERANKER_ENABLED=true
+# Uncommenting these will trigger ONNX/torch downloads and break Render free tier deployment
 # sentence-transformers>=2.2.0
 # torch>=2.0.0

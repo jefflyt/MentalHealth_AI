@@ -189,18 +189,17 @@ MentalHealth_AI/
 
 **Major Enhancement Complete:** +206 chunks (+74% increase)
 
-**🔄 Embeddings Configuration (Remote by Default):**
-- Remote HuggingFace Hub embeddings (no local PyTorch required)
+**🔄 Embeddings Configuration (Remote API Only):**
+- Remote HuggingFace Inference API embeddings (no local models)
 - Model: sentence-transformers/all-MiniLM-L6-v2 (384 dimensions)
 - Requires HUGGINGFACE_API_TOKEN environment variable
-- Low memory footprint (~50MB vs ~2GB for local models)
-- Suitable for deployment on constrained environments (Render, etc.)
+- Minimal memory footprint - suitable for 512Mi RAM deployments
+- No ONNX, torch, or sentence-transformers downloads
 
 **🔄 Re-ranker (Disabled by Default):**
-- Optional cross-encoder re-ranking (requires local PyTorch installation)
-- Enable with RERANKER_ENABLED=true for 15-25% better relevance
-- Requires Python 3.11 and >1GB RAM
-- Use only when deploying to environments with sufficient resources
+- Optional cross-encoder re-ranking (not recommended for free tier deployments)
+- Enable with RERANKER_ENABLED=true (requires 2GB+ RAM)
+- Disabled by default to prevent local model downloads
 
 **Original Categories (~279 chunks):**
 - **Mental Health Info**: Anxiety, depression, stress basics
@@ -241,7 +240,7 @@ MentalHealth_AI/
 | **Tools** | 5 specialized LangChain tools |
 | **Vector DB** | ChromaDB (persistent) |
 | **Retriever** | LangChain Chroma |
-| **Embeddings** | Remote HuggingFace Hub (all-MiniLM-L6-v2, 384d) |
+| **Embeddings** | Remote HuggingFace Inference API (all-MiniLM-L6-v2, 384d) |
 | **Re-ranker** | Disabled by default (optional cross-encoder) |
 | **Web** | Flask 3.0 |
 | **Python** | 3.11+ (no local PyTorch required) |
@@ -412,14 +411,13 @@ Try these in the web interface:
 
 1. **Get API Keys**:
    - Groq API key: https://console.groq.com/ (free)
-   - HuggingFace token: https://huggingface.co/settings/tokens (required for embeddings)
+   - HuggingFace token: https://huggingface.co/settings/tokens (required)
 
 2. **Set environment variables**:
    ```bash
    echo "GROQ_API_KEY=your_groq_key_here" > .env
    echo "HUGGINGFACE_API_TOKEN=hf_your_token_here" >> .env
-   # Optional: USE_REMOTE_EMBEDDINGS=true (default)
-   # Optional: RERANKER_ENABLED=false (default)
+   echo "FLASK_SECRET_KEY=$(python -c 'import secrets; print(secrets.token_hex(32))')" >> .env
    ```
 
 3. **Install dependencies**:

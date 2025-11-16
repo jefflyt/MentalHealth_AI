@@ -44,23 +44,24 @@
 
 **Environment Details:**
 - **Python Version**: 3.11+ (3.13 compatible)
-- **Embeddings**: Remote HuggingFace Hub API (no local models)
-- **Re-ranker**: Disabled by default (optional local installation)
-- **Dependencies**: Minimal (no PyTorch required)
+- **Embeddings**: Remote HuggingFace Inference API (no local models)
+- **Re-ranker**: Disabled by default (not recommended for production)
+- **Dependencies**: Minimal (no PyTorch, torch, or sentence-transformers required)
+- **Memory**: Optimized for 512Mi RAM deployments (Render free tier compatible)
 
 ### Environment Benefits
 
-**✅ Remote Embeddings (Default):**
-- No local PyTorch/sentence-transformers required
-- Low memory footprint (~50MB vs ~2GB)
+**✅ Remote Embeddings (Required):**
+- No local model downloads (no ONNX, torch, sentence-transformers)
+- Minimal memory footprint - fits in 512Mi RAM
 - Fast startup (<5 seconds)
-- Suitable for constrained environments (Render, Heroku, etc.)
+- Requires HUGGINGFACE_API_TOKEN environment variable
+- Suitable for free tier deployments (Render, Heroku, etc.)
 
-**✅ Optional Re-ranker (Advanced):**
-- Enable with RERANKER_ENABLED=true
-- Requires Python 3.11, PyTorch, sentence-transformers
-- Improves retrieval accuracy by 15-25%
-- Recommended only for high-memory deployments (>1GB RAM)
+**⚠️ Optional Re-ranker (Not Recommended for Free Tier):**
+- Disabled by default (RERANKER_ENABLED=false)
+- Enabling requires 2GB+ RAM and local model downloads
+- Not suitable for Render free tier (512Mi RAM limit)
 
 ### Quick Activation
 
@@ -616,13 +617,13 @@ All agents use ChromaDB for context retrieval:
 - Assessment: 3 (screening protocols)
 - Escalation: 3 (referral guidelines)
 
-### 1.7 Re-ranker Module (Enabled)
+### 1.7 Re-ranker Module (Optional)
 
 **File:** `agent/reranker.py` (250+ lines)
 
 **Purpose:** Improve RAG retrieval relevance using cross-encoder re-ranking
 
-**Status:** ✅ **Fully Enabled** - Running on Python 3.11 with PyTorch support
+**Status:** ⚠️ **Disabled by Default** - Set RERANKER_ENABLED=true to enable (requires 2GB+ RAM)
 
 **Features:**
 - Cross-encoder based re-ranking (better than cosine similarity)
@@ -782,29 +783,29 @@ Re-ranked results (semantic relevance):
 
 #### Current Status: Disabled by Default
 
-**✅ Production Ready (Optional):**
+**Configuration:**
 - Re-ranker disabled by default (`RERANKER_ENABLED=false`)
 - Optional dependencies (sentence-transformers, torch) commented out in requirements.txt
-- Enable by uncommenting dependencies and setting `RERANKER_ENABLED=true`
-- When enabled: PyTorch 2.2.2 with sentence-transformers 5.1.2
+- Not recommended for Render free tier (512Mi RAM)
+- Enable only on environments with 2GB+ RAM
 
-**Performance Metrics (Current):**
+**If Enabled (Advanced Users Only):**
+```bash
+# Uncomment in requirements.txt:
+# sentence-transformers>=2.2.0
+# torch>=2.0.0
+
+# Install dependencies
+pip install sentence-transformers torch
+
+# Enable in environment
+export RERANKER_ENABLED=true
+```
+
+**Performance (When Enabled):**
 - Average re-ranking time: ~9ms per query
 - Model loading: ~10s (cached after first use)
-- Total response time: <2.5s (including RAG + LLM)
-- Memory usage: ~50MB for TinyBERT model
-
-**Optional Disabling (if needed):**
-```bash
-# Method 1: Environment Variable
-export RERANKER_ENABLED=false
-
-# Method 2: Uninstall Package
-pip uninstall sentence-transformers
-
-# Method 3: Don't Install
-# Simply don't install sentence-transformers - system works normally
-```
+- Memory usage: ~2GB (TinyBERT model + dependencies)
 
 **Quality Improvements Observed:**
 - Anxiety queries: Perfect category matching

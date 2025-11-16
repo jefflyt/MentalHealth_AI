@@ -5,8 +5,9 @@ Provides a user-friendly web GUI for interacting with the multi-agent system
 """
 
 import os
-# Disable tokenizers parallelism warning for forked processes
+# Safety environment flags
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
+os.environ["CHROMA_DISABLE_TELEMETRY"] = "true"
 
 from flask import Flask, render_template, request, jsonify, session
 import sys

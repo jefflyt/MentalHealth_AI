@@ -182,8 +182,10 @@ def get_reranker(
     Get or create the global re-ranker instance.
     
     This function implements lazy initialization and configuration via
-    environment variables. The re-ranker can be easily disabled by setting
-    RERANKER_ENABLED=false in the environment.
+    environment variables. The re-ranker is DISABLED by default to prevent
+    downloading local models (sentence-transformers/torch/ONNX).
+    
+    To enable: Set RERANKER_ENABLED=true in environment.
     
     Args:
         enabled: Override environment variable for enabled status
@@ -191,13 +193,14 @@ def get_reranker(
         top_k: Override environment variable for top_k
     
     Returns:
-        ReRanker instance (may be disabled)
+        ReRanker instance (disabled by default)
     """
     global _reranker_instance
     
     if _reranker_instance is None:
         # Get configuration from environment with defaults
-        env_enabled = os.getenv("RERANKER_ENABLED", "true").lower() == "true"
+        # DEFAULT IS NOW FALSE to prevent ONNX downloads
+        env_enabled = os.getenv("RERANKER_ENABLED", "false").lower() == "true"
         env_threshold = float(os.getenv("RERANKER_THRESHOLD", "0.0"))
         env_top_k_str = os.getenv("RERANKER_TOP_K", "")
         env_top_k = int(env_top_k_str) if env_top_k_str else None

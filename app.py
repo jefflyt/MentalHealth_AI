@@ -6,14 +6,15 @@ A multi-agent system using LangGraph and ChromaDB for knowledge-grounded respons
 
 import os
 
-# Disable tokenizers parallelism warning for forked processes
+# Safety environment flags
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
+os.environ["CHROMA_DISABLE_TELEMETRY"] = "true"
 
 import chromadb
-from chromadb.utils import embedding_functions
 from langgraph.graph import StateGraph, END
 from langchain_groq import ChatGroq
 from langchain_chroma import Chroma
+from langchain_huggingface import HuggingFaceEndpointEmbeddings
 from typing import TypedDict, List, Dict, Any
 from dotenv import load_dotenv
 
@@ -77,47 +78,34 @@ load_dotenv()
 # Initialize ChromaDB with LangChain Retriever
 chroma_client = chromadb.PersistentClient(path="./data/chroma_db")
 
-# Embeddings: use remote Hugging Face Hub embeddings by default to avoid local torch/PyTorch load
-# Set USE_REMOTE_EMBEDDINGS=true (default) and provide HUGGINGFACE_API_TOKEN in env.
-# To disable reranker/torch entirely set RERANKER_ENABLED=false in env.
+# Global embeddings instance - MUST use remote API only (no local models)
 embeddings = None
 
 def get_embeddings():
-    """Lazily return an embeddings object.
-
-    Uses HuggingFace Hub remote embeddings (no local torch) when
-    `USE_REMOTE_EMBEDDINGS` is true (default). Requires `HUGGINGFACE_API_TOKEN`.
-    If `RERANKER_ENABLED=false` the function returns None to avoid loading any heavy models.
+    """Get remote HuggingFace API embeddings.
+    
+    Uses HuggingFace Inference API - NO local models, NO ONNX downloads.
+    Requires HUGGINGFACE_API_TOKEN environment variable.
     """
     global embeddings
     if embeddings is not None:
         return embeddings
-
-    reranker_enabled = os.getenv("RERANKER_ENABLED", "false").lower() not in ("0", "false", "no")
-    use_remote = os.getenv("USE_REMOTE_EMBEDDINGS", "true").lower() in ("1", "true", "yes")
-
-    if not reranker_enabled:
-        # Explicitly avoid initializing any local/pytorch models when reranker disabled
-        print("⚠️  RERANKER_ENABLED=false -> skipping local embedding initialization.")
-        embeddings = None
-        return embeddings
-
-    if use_remote:
-        hf_token = os.getenv("HUGGINGFACE_API_TOKEN")
-        if not hf_token:
-            raise RuntimeError("HUGGINGFACE_API_TOKEN is required for remote HuggingFace embeddings")
-        # Import lazily to avoid heavy imports at module load
-        from langchain.embeddings.huggingface_hub import HuggingFaceHubEmbeddings
-        embeddings = HuggingFaceHubEmbeddings(
-            repo_id="sentence-transformers/all-MiniLM-L6-v2",
-            huggingfacehub_api_token=hf_token
+    
+    hf_token = os.getenv("HUGGINGFACE_API_TOKEN")
+    if not hf_token:
+        raise RuntimeError(
+            "HUGGINGFACE_API_TOKEN is required for remote embeddings. "
+            "Get your token at https://huggingface.co/settings/tokens"
         )
-        print("✅ Using remote HuggingFace Hub embeddings (all-MiniLM-L6-v2)")
-        return embeddings
-
-    # If remote is disabled, do not auto-load local transformer (avoids OOM). User can change env.
-    print("⚠️ USE_REMOTE_EMBEDDINGS is false — local embeddings will not be initialized automatically.")
-    embeddings = None
+    
+    # Use HuggingFace Inference API (remote only - no local model downloads)
+    embeddings = HuggingFaceEndpointEmbeddings(
+        model="sentence-transformers/all-MiniLM-L6-v2",
+        task="feature-extraction",
+        huggingfacehub_api_token=hf_token,
+    )
+    print("✅ Using remote HuggingFace API embeddings (sentence-transformers/all-MiniLM-L6-v2)")
+    print("   No local models - embeddings run via HuggingFace Inference API")
     return embeddings
 
 # Global retriever instance
@@ -238,16 +226,19 @@ def get_relevant_context(query: str, n_results: int = 3) -> str:
         return "Unable to retrieve context at this time."
 
 def initialize_chroma():
-    """Initialize ChromaDB with LangChain Retriever."""
+    """Initialize ChromaDB with LangChain Retriever using remote embeddings."""
     global retriever, chains, tools
     
     try:
-        # Try to create LangChain Chroma retriever from existing collection
+        # Get remote embeddings (HuggingFace API - no local models)
         emb = get_embeddings()
+        
+        # Use LangChain Chroma wrapper with remote embeddings
         vectorstore = Chroma(
             client=chroma_client,
             collection_name="mental_health_kb",
-            embedding_function=emb
+            embedding_function=emb,
+            persist_directory="./data/chroma_db"
         )
         
         # Create retriever with search parameters
@@ -308,22 +299,17 @@ def initialize_chroma():
                         except Exception as e:
                             print(f"Error reading {file_path}: {e}")
         
-        # Create vectorstore with documents
+        # Create vectorstore with documents using remote embeddings
         if documents:
             emb = get_embeddings()
-            if emb is None:
-                print("⚠️  Embeddings not available; cannot create vectorstore from texts. "
-                      "Set RERANKER_ENABLED=true or enable USE_REMOTE_EMBEDDINGS.")
-                vectorstore = None
-            else:
-                vectorstore = Chroma.from_texts(
-                    texts=documents,
-                    embedding=emb,
-                    metadatas=metadatas,
-                    ids=ids,
-                    client=chroma_client,
-                    collection_name="mental_health_kb"
-                )
+            vectorstore = Chroma.from_texts(
+                texts=documents,
+                embedding=emb,
+                metadatas=metadatas,
+                ids=ids,
+                persist_directory="./data/chroma_db",
+                collection_name="mental_health_kb"
+            )
             
             # Create retriever
             retriever = vectorstore.as_retriever(
@@ -443,7 +429,13 @@ def check_for_data_updates():
         # Import update agent from agent module
         from agent import UpdateAgent
         
-        agent = UpdateAgent()
+        # Get embeddings to pass to update agent
+        emb = get_embeddings()
+        
+        agent = UpdateAgent(
+            chroma_client=chroma_client,
+            embedding_function=emb
+        )
         print("\n🔍 Checking for data updates...")
         
         # Check for changes

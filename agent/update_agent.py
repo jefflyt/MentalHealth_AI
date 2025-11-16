@@ -5,6 +5,9 @@ Monitors data/knowledge/ folder and performs intelligent updates when changes ar
 
 Supports multiple file formats: .txt, .md, .pdf, .docx, .html, .json, .csv
 
+**IMPORTANT**: This module NO LONGER uses local embeddings.
+Embeddings must be passed from the main app (using remote HuggingFace API).
+
 Recommended folder structure:
   data/knowledge/
   ├── text/                    # Plain text files (.txt)
@@ -21,8 +24,7 @@ Also supports legacy category-based structure (coping_strategies/, crisis_protoc
 
 import os
 import chromadb
-from chromadb.utils import embedding_functions
-from typing import List, Dict, Set
+from typing import List, Dict, Set, Any, Optional
 import hashlib
 import json
 from datetime import datetime
@@ -53,9 +55,8 @@ try:
 except ImportError:
     HTML_SUPPORT = False
 
-# Initialize ChromaDB
-chroma_client = chromadb.PersistentClient(path="./data/chroma_db")
-embedding_function = embedding_functions.DefaultEmbeddingFunction()
+# Note: ChromaDB client and embeddings are now passed as parameters
+# No global initialization to prevent ONNX downloads
 
 # State tracking file
 STATE_FILE = "data/chroma_db/.update_state.json"
@@ -85,9 +86,25 @@ class UpdateAgent:
         '.csv': 'CSV Data',
     }
     
-    def __init__(self, knowledge_dir: str = "data/knowledge", collection_name: str = "mental_health_kb"):
+    def __init__(
+        self,
+        knowledge_dir: str = "data/knowledge",
+        collection_name: str = "mental_health_kb",
+        chroma_client: Optional[chromadb.PersistentClient] = None,
+        embedding_function: Optional[Any] = None
+    ):
+        """Initialize Update Agent.
+        
+        Args:
+            knowledge_dir: Path to knowledge base folder
+            collection_name: ChromaDB collection name
+            chroma_client: ChromaDB client instance (required)
+            embedding_function: Embedding function to use (required for adding docs)
+        """
         self.knowledge_dir = knowledge_dir
         self.collection_name = collection_name
+        self.chroma_client = chroma_client
+        self.embedding_function = embedding_function
         self.state = self.load_state()
         self._print_format_support()
     
@@ -362,17 +379,22 @@ class UpdateAgent:
         """Perform smart update: only process new/modified files."""
         print("\n🔄 Starting Smart Update...")
         
+        if self.chroma_client is None:
+            raise RuntimeError("ChromaDB client is required. Pass it in __init__().")
+        if self.embedding_function is None:
+            raise RuntimeError("Embedding function is required. Pass it in __init__().")
+        
         # Get or create collection
         try:
-            collection = chroma_client.get_collection(
+            collection = self.chroma_client.get_collection(
                 name=self.collection_name,
-                embedding_function=embedding_function
+                embedding_function=self.embedding_function
             )
             print(f"✅ Using existing collection: {self.collection_name}")
         except:
-            collection = chroma_client.create_collection(
+            collection = self.chroma_client.create_collection(
                 name=self.collection_name,
-                embedding_function=embedding_function
+                embedding_function=self.embedding_function
             )
             print(f"📚 Created new collection: {self.collection_name}")
         
@@ -486,8 +508,12 @@ class UpdateAgent:
     
     def list_current_state(self):
         """Display current ChromaDB state."""
+        if self.chroma_client is None:
+            print("❌ Error: ChromaDB client not initialized")
+            return
+            
         try:
-            collection = chroma_client.get_collection(self.collection_name)
+            collection = self.chroma_client.get_collection(self.collection_name)
             results = collection.get()
             
             print(f"\n📚 Current ChromaDB State:")
@@ -518,7 +544,31 @@ def main():
     """Main CLI for update agent."""
     import sys
     
-    agent = UpdateAgent()
+    print("⚠️  WARNING: Update agent now requires embeddings from main app.")
+    print("   This CLI mode uses basic initialization for testing only.")
+    print("   For production, import UpdateAgent and pass embeddings from app.py\n")
+    
+    # Initialize client (embedding function will be minimal for CLI mode)
+    chroma_client = chromadb.PersistentClient(path="./data/chroma_db")
+    
+    # For CLI testing, we need an embedding function
+    # In production, this should come from app.py with remote embeddings
+    try:
+        # Try to import from app module
+        import sys
+        sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+        from app import get_embeddings
+        embedding_func = get_embeddings()
+        print("✅ Using embeddings from app.py (remote HuggingFace API)\n")
+    except Exception as e:
+        print(f"⚠️  Could not load embeddings from app.py: {e}")
+        print("   Update operations will fail. Use this only for 'check' or 'status' commands.\n")
+        embedding_func = None
+    
+    agent = UpdateAgent(
+        chroma_client=chroma_client,
+        embedding_function=embedding_func
+    )
     
     if len(sys.argv) < 2:
         print("""
@@ -567,9 +617,12 @@ Examples:
         print("🔄 Force Update: Recreating collection...")
         confirm = input("⚠️  This will recreate the entire collection. Continue? (yes/no): ")
         if confirm.lower() == 'yes':
+            if agent.chroma_client is None:
+                print("❌ Error: ChromaDB client not initialized")
+                return
             try:
-                chroma_client.delete_collection(name=agent.collection_name)
-                print("🗑️  Deleted existing collection")
+                agent.chroma_client.delete_collection(name=agent.collection_name)
+                print("🗱️  Deleted existing collection")
             except:
                 pass
             agent.state = {"file_hashes": {}, "last_update": None, "total_chunks": 0}
