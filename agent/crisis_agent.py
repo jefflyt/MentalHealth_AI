@@ -16,7 +16,11 @@ class AgentState(TypedDict):
 
 
 def crisis_intervention_node(state: AgentState, llm: ChatGroq, get_relevant_context) -> AgentState:
-    """Crisis intervention with Sunny's caring presence and immediate support protocols."""
+    """Crisis intervention with Sunny's caring presence and immediate support protocols.
+    
+    OPTIMIZED: No ChromaDB queries - crisis requires INSTANT response.
+    All critical info is hardcoded in the prompt for maximum speed.
+    """
     
     # Load Sunny's persona components
     sunny = get_sunny_persona()
@@ -28,12 +32,29 @@ def crisis_intervention_node(state: AgentState, llm: ChatGroq, get_relevant_cont
     
     query = state["current_query"]
     
-    # Get crisis intervention context (optimized for speed)
-    crisis_context = get_relevant_context(f"crisis intervention emergency protocols {query}", n_results=2)
+    # OPTIMIZATION: Skip ChromaDB query - crisis needs INSTANT response
+    # Hardcode all critical emergency info directly in the prompt
+    print("⚡ CRISIS MODE: Skipping DB query for instant response")
+    
+    crisis_knowledge = """
+    EMERGENCY CONTACTS (Singapore):
+    - SOS Helpline: 1767 (24/7, free, emotional support)
+    - IMH Emergency: 6389-2222 (psychiatric emergency)
+    - Samaritans of Singapore (SOS): 1767 (24/7 suicide prevention)
+    - CHAT (Youth 16-30): 6493-6500 (mental health assessment)
+    - 995: Police/Ambulance (immediate danger)
+    
+    CRISIS PROTOCOLS:
+    1. Validate their pain and feelings immediately
+    2. Assess immediate safety
+    3. Provide emergency contacts
+    4. Encourage professional help NOW
+    5. Stay calm, caring, and directive
+    """
     
     crisis_prompt = build_sunny_prompt(
         agent_type='crisis',
-        context=f"Crisis situation detected. Context: {crisis_context}\nUser Query: \"{query}\"",
+        context=f"Crisis situation detected.\n\n{crisis_knowledge}\n\nUser: \"{query}\"",
         specific_instructions=f"""As Sunny, I'm here with you right now in this crisis. Respond with urgent care while maintaining your warm presence.
 
 IMMEDIATELY provide:

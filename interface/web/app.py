@@ -205,12 +205,18 @@ def chat():
         
         # Run the workflow and measure time
         workflow_start = time.time()
+        app.logger.info(f"🚀 Starting workflow for: '{user_message[:50]}...'")
+        
         result = workflow.invoke(initial_state)
+        
         workflow_duration = time.time() - workflow_start
+        app.logger.info(f"✅ Workflow completed in {workflow_duration:.3f}s")
         
         # Extract agent response
         agent_messages = result.get('messages', [])
         agent_response = '\n\n'.join(agent_messages) if agent_messages else "I'm here to help. Could you tell me more?"
+        
+        app.logger.info(f"📤 Response: {len(agent_response)} chars from {result.get('current_agent')} agent")
         
         print(f"🤖 Agent: {result.get('current_agent')}")  # Debug log
         print(f"💬 Response length: {len(agent_response)} chars")  # Debug log
@@ -229,8 +235,8 @@ def chat():
         # Calculate total duration
         total_duration = time.time() - start_time
         
-        # Log performance metrics
-        app.logger.info(f"⏱️  Workflow duration: {workflow_duration:.2f}s | Total request duration: {total_duration:.2f}s")
+        # Log performance metrics with detailed breakdown
+        app.logger.info(f"⏱️  TIMING | Workflow: {workflow_duration:.3f}s | Total: {total_duration:.3f}s | Overhead: {(total_duration - workflow_duration):.3f}s")
         
         return jsonify({
             'response': agent_response,

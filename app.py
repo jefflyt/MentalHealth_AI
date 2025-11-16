@@ -205,15 +205,27 @@ llm = get_llm()
 
 # RAG Helper Functions
 def get_relevant_context(query: str, n_results: int = 2) -> str:
-    """Retrieve relevant context using LangChain Retriever (optimized)."""
+    """Retrieve relevant context using LangChain Retriever (optimized with timing).
+    
+    IMPORTANT: Retriever is initialized once at module level for performance.
+    This function just queries the pre-built retriever.
+    """
     global retriever
     
     if retriever is None:
         return "Retriever not initialized."
     
     try:
+        import time
+        
+        # Time the retrieval operation
+        retrieval_start = time.time()
+        
         # Use LangChain retriever (invoke method for compatibility)
         docs = retriever.invoke(query)
+        
+        retrieval_duration = time.time() - retrieval_start
+        print(f"⏱️  ChromaDB retrieval took {retrieval_duration:.3f}s for query: '{query[:50]}...'")
         
         if docs:
             # Format retrieved documents (limit to n_results)
@@ -222,15 +234,24 @@ def get_relevant_context(query: str, n_results: int = 2) -> str:
                 source = doc.metadata.get('source', 'Knowledge Base')
                 context_pieces.append(f"[Source: {source}]\n{doc.page_content}")
             
-            return "\n\n---\n\n".join(context_pieces)
+            result = "\n\n---\n\n".join(context_pieces)
+            print(f"   Retrieved {len(docs[:n_results])} documents ({len(result)} chars)")
+            return result
         else:
             return "No specific information found in knowledge base."
     except Exception as e:
-        print(f"Retriever query error: {e}")
+        print(f"❌ Retriever query error: {e}")
         return "Unable to retrieve context at this time."
 
 def initialize_chroma():
-    """Initialize ChromaDB with LangChain Retriever using remote embeddings (idempotent)."""
+    """Initialize ChromaDB with LangChain Retriever using remote embeddings (idempotent).
+    
+    PERFORMANCE OPTIMIZED:
+    - All heavy objects (client, collection, vectorstore, retriever) created ONCE at startup
+    - Retriever configured with small k=2 for fast queries
+    - No filters used - simple similarity search only
+    - Timing logs for diagnostics
+    """
     global retriever, chains, tools, _initialization_complete
     
     # Skip if already initialized
@@ -241,8 +262,19 @@ def initialize_chroma():
     print("🔨 Initializing ChromaDB, chains, and tools (one-time)...")
     
     try:
+        import time
+        
+        # Time the embedding initialization
+        emb_start = time.time()
+        
         # Get remote embeddings (HuggingFace API - no local models)
         emb = get_embeddings()
+        
+        emb_duration = time.time() - emb_start
+        print(f"⏱️  Embedding function initialized in {emb_duration:.3f}s")
+        
+        # Time the vectorstore creation
+        vs_start = time.time()
         
         # Use LangChain Chroma wrapper with remote embeddings
         vectorstore = Chroma(
@@ -252,13 +284,20 @@ def initialize_chroma():
             persist_directory="./data/chroma_db"
         )
         
-        # Create retriever with search parameters (optimized for speed)
+        vs_duration = time.time() - vs_start
+        print(f"⏱️  Vectorstore loaded in {vs_duration:.3f}s")
+        
+        # Create retriever with optimized search parameters
+        # PERFORMANCE: k=2 for speed (was 3), no filters for simplicity
         retriever = vectorstore.as_retriever(
             search_type="similarity",
-            search_kwargs={"k": 2}  # Reduced from 3 to 2 for faster queries
+            search_kwargs={"k": 2}  # Small k for fast queries on Render
         )
         
         print("✅ ChromaDB Retriever loaded from existing collection")
+        print(f"   - Search type: similarity")
+        print(f"   - k: 2 (max documents per query)")
+        print(f"   - No filters (simple & fast)")
         
         # Initialize chains with retriever and LLM
         chains["rag"] = create_rag_chain(retriever, llm)
@@ -276,6 +315,9 @@ def initialize_chroma():
         
         # Mark as initialized
         _initialization_complete = True
+        
+        total_duration = time.time() - emb_start
+        print(f"⏱️  Total initialization: {total_duration:.3f}s")
         
         return vectorstore
         
