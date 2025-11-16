@@ -29,12 +29,13 @@ load_dotenv()
 app = Flask(__name__)
 app.secret_key = os.getenv('FLASK_SECRET_KEY')
 
-# Initialize the agent workflow
-print("🔧 Initializing AI Mental Health Agent...")
+# Initialize the agent workflow ONCE at module load
+print("🔧 Initializing AI Mental Health Agent (one-time startup)...")
 check_for_data_updates()  # Check for data updates
-initialize_chroma()  # Initialize ChromaDB
-workflow = create_workflow()
-print("✅ Agent system ready!")
+initialize_chroma()  # Initialize ChromaDB (idempotent)
+workflow = create_workflow()  # Get compiled workflow (singleton)
+print("✅ Agent system ready! All heavy initialization complete.")
+print("🚀 Flask routes are now lightweight and fast.")
 
 # Store conversation history (in production, use a database)
 conversations = {}
@@ -237,16 +238,14 @@ def chat():
 
 @app.route('/new-conversation', methods=['POST'])
 def new_conversation():
-    """Start a new conversation and reload agent modules."""
-    global workflow
-    
+    """Start a new conversation (lightweight - no module reloading)."""
     try:
         # Create new session ID
         new_session_id = str(uuid.uuid4())
         session['session_id'] = new_session_id
         conversations[new_session_id] = []
         
-        # Clear assessment results and vague response counter when starting new conversation
+        # Clear assessment results and vague response counter
         if 'assessment_results' in session:
             del session['assessment_results']
             print("🧠 Cleared assessment results for new conversation")
@@ -255,48 +254,23 @@ def new_conversation():
             del session['vague_response_count']
             print("🔄 Reset vague response counter for new conversation")
         
-        # Force reload of agent modules by clearing cache
-        print("\n🔄 Reloading agent modules...")
-        
-        # Clear module cache for agent modules
-        import importlib
-        modules_to_reload = [
-            'agent.information_agent',
-            'agent.router_agent',
-            'agent.crisis_agent',
-            'agent.resource_agent',
-            'agent.assessment_agent',
-            'agent.escalation_agent'
-        ]
-        
-        for module_name in modules_to_reload:
-            if module_name in sys.modules:
-                importlib.reload(sys.modules[module_name])
-        
-        # Reload main app module
-        if 'app' in sys.modules:
-            importlib.reload(sys.modules['app'])
-        
-        # Recreate workflow with fresh modules
-        from app import create_workflow
-        workflow = create_workflow()
-        
-        print("✅ Agent modules reloaded!")
+        # NO MODULE RELOADING - workflow is a singleton, already initialized
+        print(f"✅ New conversation started (session: {new_session_id[:8]}...)")
         
         return jsonify({
             'message': 'New conversation started',
             'session_id': new_session_id,
-            'modules_reloaded': True
+            'modules_reloaded': False  # Never reload
         })
         
     except Exception as e:
-        print(f"⚠️  Module reload error: {e}")
-        # Still create new conversation even if reload fails
+        print(f"⚠️  Error in new_conversation: {e}")
+        # Still create new conversation even on error
         new_session_id = str(uuid.uuid4())
         session['session_id'] = new_session_id
         conversations[new_session_id] = []
         
-        # Clear assessment results even if reload fails
+        # Clear assessment results even on error
         if 'assessment_results' in session:
             del session['assessment_results']
         
@@ -620,6 +594,36 @@ def health_check():
     except Exception as e:
         return jsonify({
             "status": "error",
+            "error": str(e),
+            "timestamp": datetime.now().isoformat()
+        }), 500
+
+@app.route('/admin/update-knowledge', methods=['POST'])
+def force_data_update():
+    """Admin endpoint to manually trigger knowledge base update.
+    
+    Use this when you've added new documents and want to update immediately
+    without waiting for the automatic check interval.
+    """
+    try:
+        print("\n🔧 Manual knowledge base update triggered...")
+        from app import check_for_data_updates
+        
+        # Force update (bypass throttling)
+        has_changes = check_for_data_updates(force=True)
+        
+        return jsonify({
+            "success": True,
+            "message": "Knowledge base updated" if has_changes else "No changes detected",
+            "changes_applied": has_changes,
+            "timestamp": datetime.now().isoformat()
+        })
+    except Exception as e:
+        print(f"❌ Manual update error: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({
+            "success": False,
             "error": str(e),
             "timestamp": datetime.now().isoformat()
         }), 500

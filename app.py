@@ -130,6 +130,10 @@ chains = {
     "crisis_detection": None
 }
 
+# Global compiled workflow (singleton)
+_compiled_workflow = None
+_initialization_complete = False
+
 
 def get_or_create_memory(session_id: str = "default") -> ConversationBufferMemory:
     """Get or create conversation memory for a session."""
@@ -226,8 +230,15 @@ def get_relevant_context(query: str, n_results: int = 3) -> str:
         return "Unable to retrieve context at this time."
 
 def initialize_chroma():
-    """Initialize ChromaDB with LangChain Retriever using remote embeddings."""
-    global retriever, chains, tools
+    """Initialize ChromaDB with LangChain Retriever using remote embeddings (idempotent)."""
+    global retriever, chains, tools, _initialization_complete
+    
+    # Skip if already initialized
+    if _initialization_complete:
+        print("✅ ChromaDB already initialized (using cached instances)")
+        return
+    
+    print("🔨 Initializing ChromaDB, chains, and tools (one-time)...")
     
     try:
         # Get remote embeddings (HuggingFace API - no local models)
@@ -262,6 +273,9 @@ def initialize_chroma():
         tools["breathing"] = create_breathing_exercise_tool()
         tools["mood_tracker"] = create_mood_tracker_tool()
         print("✅ Tools initialized (Assessment, Resource, Crisis, Breathing, Mood)")
+        
+        # Mark as initialized
+        _initialization_complete = True
         
         return vectorstore
         
@@ -332,6 +346,9 @@ def initialize_chroma():
             print("✅ Tools initialized")
             
             print(f"✅ Created ChromaDB with {len(documents)} chunks, Retriever, Chains, and Tools")
+            
+            # Mark as initialized
+            _initialization_complete = True
         else:
             print("⚠️ No documents found in data directory")
             vectorstore = None
@@ -384,7 +401,14 @@ def escalation_wrapper(state: AgentState) -> AgentState:
 
 # Create the workflow
 def create_workflow():
-    """Create the RAG-enhanced LangGraph workflow."""
+    """Get or create the RAG-enhanced LangGraph workflow (singleton)."""
+    global _compiled_workflow
+    
+    # Return cached workflow if already built
+    if _compiled_workflow is not None:
+        return _compiled_workflow
+    
+    print("🔨 Building LangGraph workflow (one-time initialization)...")
     workflow = StateGraph(AgentState)
     
     # Add nodes with wrapper functions
@@ -421,13 +445,41 @@ def create_workflow():
     workflow.add_edge("assessment", END)
     workflow.add_edge("human_escalation", END)
     
-    return workflow.compile()
+    # Compile once and cache
+    _compiled_workflow = workflow.compile()
+    print("✅ LangGraph workflow compiled and cached")
+    return _compiled_workflow
 
-def check_for_data_updates():
-    """Check for new/modified data and perform smart update if needed."""
+# Global update tracking
+_last_update_check = None
+_update_check_interval = int(os.getenv("DATA_UPDATE_INTERVAL", "3600"))  # Default: 1 hour
+
+def check_for_data_updates(force: bool = False):
+    """Check for new/modified data and perform smart update if needed.
+    
+    Uses time-based throttling to avoid excessive checks.
+    
+    Args:
+        force: If True, bypass throttling and force check
+    
+    Returns:
+        True if updates were applied, False otherwise
+    """
+    global _last_update_check
+    
     try:
+        # Time-based throttling (unless forced)
+        if not force and _last_update_check is not None:
+            import time
+            elapsed = time.time() - _last_update_check
+            if elapsed < _update_check_interval:
+                remaining = int(_update_check_interval - elapsed)
+                print(f"⏭️  Data update check skipped (checked {int(elapsed)}s ago, next check in {remaining}s)")
+                return False
+        
         # Import update agent from agent module
         from agent import UpdateAgent
+        import time
         
         # Get embeddings to pass to update agent
         emb = get_embeddings()
@@ -438,6 +490,9 @@ def check_for_data_updates():
         )
         print("\n🔍 Checking for data updates...")
         
+        # Update last check time
+        _last_update_check = time.time()
+        
         # Check for changes
         has_changes = agent.check_for_updates()
         
@@ -447,13 +502,17 @@ def check_for_data_updates():
             print("✅ ChromaDB updated with new data")
             return True
         else:
+            print("✓ No changes detected")
             return False
             
     except ImportError:
         # Update agent not available, skip check
+        print("⚠️  UpdateAgent not available")
         return False
     except Exception as e:
         print(f"⚠️  Update check error: {e}")
+        import traceback
+        traceback.print_exc()
         return False
 
 def main():
