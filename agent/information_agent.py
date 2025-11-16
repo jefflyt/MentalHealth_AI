@@ -144,27 +144,106 @@ class AgentState(TypedDict):
     distress_level: str  # 'high', 'moderate', 'mild', or 'none'
 
 
+def _invoke_llm_with_timeout(llm, prompt: str, seed: int, max_tokens: int = 256, timeout: int = 40) -> str:
+    """Invoke LLM with timeout protection for Render free tier.
+    
+    Args:
+        llm: ChatGroq LLM instance
+        prompt: Prompt to send to LLM
+        seed: Deterministic seed
+        max_tokens: Maximum tokens to generate (default 256 for speed)
+        timeout: Timeout in seconds (default 40s)
+    
+    Returns:
+        Generated response text
+        
+    Raises:
+        TimeoutError: If LLM call exceeds timeout
+    """
+    import signal
+    
+    def timeout_handler(signum, frame):
+        raise TimeoutError(f"LLM call exceeded {timeout}s timeout")
+    
+    # Set up timeout (Unix-only, won't work on Windows)
+    try:
+        old_handler = signal.signal(signal.SIGALRM, timeout_handler)
+        signal.alarm(timeout)
+        
+        try:
+            response = llm.invoke(
+                prompt,
+                config={
+                    "configurable": {"seed": seed},
+                    "max_tokens": max_tokens  # Cap tokens for speed
+                }
+            ).content.strip()
+            
+            return response
+        finally:
+            # Cancel timeout
+            signal.alarm(0)
+            signal.signal(signal.SIGALRM, old_handler)
+            
+    except AttributeError:
+        # signal.SIGALRM not available (Windows) - just call without timeout
+        response = llm.invoke(
+            prompt,
+            config={
+                "configurable": {"seed": seed},
+                "max_tokens": max_tokens
+            }
+        ).content.strip()
+        return response
+
+
 def information_agent_node(state: AgentState, llm: ChatGroq, get_relevant_context) -> AgentState:
-    """RAG-enhanced information agent with Sunny's personality - OPTIMIZED."""
+    """RAG-enhanced information agent with Sunny's personality - RENDER OPTIMIZED.
+    
+    Performance optimizations for Render free tier:
+    - Detailed timing logs with [INFO_AGENT] prefix
+    - Truncate long messages before processing (512 chars max)
+    - Cap LLM max_tokens to 256
+    - Timeout wrapper around LLM calls (40s max)
+    - Retriever k=3 for speed
+    """
+    import time
+    import logging
+    
+    # Get logger (use app.logger if available, otherwise use print)
+    try:
+        from flask import current_app
+        logger = current_app.logger
+    except:
+        logger = logging.getLogger(__name__)
+    
+    agent_start = time.time()
+    logger.info("[INFO_AGENT] 🚀 Information agent started")
+    
     query = state["current_query"]
     conversation_history = state.get("messages", [])
     distress_level = state.get("distress_level", "none")
-    external_context = state.get("context", "")  # Assessment results or other context
+    external_context = state.get("context", "")
+    
+    # OPTIMIZATION: Truncate long queries to avoid expensive embeddings
+    original_query_len = len(query)
+    if len(query) > 512:
+        query = query[:512]
+        logger.info(f"[INFO_AGENT] ✂️  Truncated query from {original_query_len} to 512 chars")
     
     # Load Sunny's persona components
     sunny = get_sunny_persona()
     distress_responses = get_distress_responses()
     
-    print("\n" + "="*60)
-    print("📚 [SUNNY - INFORMATION AGENT ACTIVATED]")
-    print("="*60)
+    logger.info(f"[INFO_AGENT] 📝 Query: '{query[:50]}...' | Distress: {distress_level}")
     
     # ========================================================================
     # OPTIMIZATION 1: Check cached answers first (instant response, no LLM/DB)
     # ========================================================================
     cached_answer = get_cached_answer(query)
     if cached_answer and distress_level == 'none':
-        print("⚡ CACHED ANSWER: Returning instant response (no LLM/DB calls)")
+        elapsed = time.time() - agent_start
+        logger.info(f"[INFO_AGENT] ⚡ CACHED response returned in {elapsed:.3f}s")
         state["messages"].append(cached_answer)
         state["current_agent"] = "complete"
         return state
@@ -173,14 +252,14 @@ def information_agent_node(state: AgentState, llm: ChatGroq, get_relevant_contex
     # OPTIMIZATION 2: Off-topic detection (skip LLM/DB for unrelated queries)
     # ========================================================================
     if is_off_topic(query) and distress_level == 'none':
-        print("🚫 OFF-TOPIC DETECTED: Returning redirect (no LLM/DB calls)")
+        elapsed = time.time() - agent_start
+        logger.info(f"[INFO_AGENT] 🚫 OFF-TOPIC detected, redirect in {elapsed:.3f}s")
         state["messages"].append(sunny['redirect_template'])
         state["current_agent"] = "complete"
         return state
     
     # Use distress level from router (SIMPLIFIED 2-LEVEL SYSTEM)
     sounds_unstable = distress_level in ['high', 'mild']
-    print(f"🔍 Distress level: {distress_level.upper()}")
     
     # Define agent services with keywords/numbers
     agent_services = {
@@ -207,33 +286,27 @@ def information_agent_node(state: AgentState, llm: ChatGroq, get_relevant_contex
     }
     
     # Check if user selected a number or mentioned keywords
-    # BUT ONLY if they're not in distress - distress responses take priority!
     selected_service = None
     
-    # Check for number selection (always works)
     if query.strip() in ['1', '2', '3', '4']:
         selected_service = agent_services[query.strip()]
-        print(f"✅ User selected option {query.strip()}: {selected_service['name']}")
+        logger.info(f"[INFO_AGENT] ✅ Menu selection: {selected_service['name']}")
     elif not sounds_unstable:
-        # Only check keyword matches if user is NOT in distress
         query_lower = query.lower()
         for service_num, service in agent_services.items():
             if any(keyword in query_lower for keyword in service['keywords']):
                 selected_service = service
-                print(f"✅ Keyword match detected → Option {service_num}: {selected_service['name']}")
+                logger.info(f"[INFO_AGENT] 🔍 Keyword match: {selected_service['name']}")
                 break
-    else:
-        print("🚨 User in distress - skipping keyword matching, prioritizing distress response")
     
     # Flow logic - DISTRESS TAKES PRIORITY
     if sounds_unstable:
-        # User is distressed - show response based on distress level (SIMPLIFIED 2-LEVEL SYSTEM)
-        print(f"📋 PRIORITY: Showing Sunny's {distress_level} distress response")
+        # User is distressed - show response based on distress level
+        logger.info(f"[INFO_AGENT] 😔 Distress response: {distress_level}")
         
         distress_response = distress_responses[distress_level]
         
         if distress_level == 'high':
-            # HIGH distress - immediate empathy + structured support menu
             response = f"""{distress_response['opening']}
 
 {distress_response['context']}
@@ -246,9 +319,7 @@ I can support you with:
 4️⃣ Just being here to listen - whatever you need
 
 Type a number (1-4), or just tell me more about what's happening. I'm not going anywhere. 😊"""
-
         else:  # mild distress
-            # MILD distress - friendly, casual, bullet-point style
             response = f"""{distress_response['opening']}
 
 {distress_response['context']}
@@ -261,20 +332,29 @@ What would you like help with?
 
 What's on your mind today?"""
         
+        elapsed = time.time() - agent_start
+        logger.info(f"[INFO_AGENT] ✅ Distress menu returned in {elapsed:.3f}s")
         state["messages"].append(response)
         state["current_agent"] = "complete"
         return state
         
     elif selected_service:
-        # User selected a service - provide relevant info
-        print(f"💡 Providing info about: {selected_service['topic']}")
+        # User selected a service - provide relevant info with RAG
+        logger.info(f"[INFO_AGENT] 💡 Selected service: {selected_service['topic']}")
         
-        # Get context with optional re-ranking (optimized for speed)
-        raw_context = get_relevant_context(selected_service['topic'], n_results=2)
+        # TIMING: RAG retrieval
+        rag_start = time.time()
+        logger.info(f"[INFO_AGENT] 🔍 Starting RAG retrieval (k=3)")
         
-        # Re-rank if enabled
+        # Get context with k=3 for speed on Render
+        raw_context = get_relevant_context(selected_service['topic'], n_results=3)
+        
+        rag_duration = time.time() - rag_start
+        logger.info(f"[INFO_AGENT] ✅ RAG retrieval completed in {rag_duration:.3f}s")
+        
+        # Re-rank if enabled (usually disabled on Render)
         if USE_RERANKER:
-            # Convert context string to document list for re-ranking
+            rerank_start = time.time()
             docs = [{"text": raw_context, "source": "knowledge_base"}]
             reranked_docs = rerank_documents(
                 query=selected_service['topic'],
@@ -282,60 +362,74 @@ What's on your mind today?"""
                 document_key="text"
             )
             info_context = reranked_docs[0]["text"] if reranked_docs else raw_context
-            print("🔄 Re-ranking applied to context")
+            rerank_duration = time.time() - rerank_start
+            logger.info(f"[INFO_AGENT] 🔄 Re-ranking completed in {rerank_duration:.3f}s")
         else:
             info_context = raw_context
         
-        # SIMPLIFIED PROMPT - removed examples and lengthy instructions
+        # Build prompt
         prompt = build_sunny_prompt(
             agent_type='information',
             context=f"Topic: {selected_service['name']}\n\nKnowledge: {info_context}",
             specific_instructions="Provide ONE actionable tip (1-2 sentences). Be warm and supportive."
         )
         
+        # TIMING: LLM generation with timeout
+        llm_start = time.time()
+        logger.info("[INFO_AGENT] 🤖 Starting LLM generation (max_tokens=256, timeout=40s)")
+        
         try:
-            # Generate deterministic seed for consistent responses
+            # Generate deterministic seed
             import hashlib
             query_seed = int(hashlib.md5(query.lower().strip().encode()).hexdigest()[:8], 16)
             
-            response = llm.invoke(
-                prompt,
-                config={"configurable": {"seed": query_seed}}
-            ).content.strip()
+            # Call LLM with timeout wrapper
+            response = _invoke_llm_with_timeout(
+                llm=llm,
+                prompt=prompt,
+                seed=query_seed,
+                max_tokens=256,
+                timeout=40
+            )
+            
+            llm_duration = time.time() - llm_start
+            logger.info(f"[INFO_AGENT] ✅ LLM generation completed in {llm_duration:.3f}s ({len(response)} chars)")
             
             # Hard limit - only first 2 sentences
             sentences = [s.strip() for s in response.split('.') if s.strip()]
             if len(sentences) > 2:
                 response = '. '.join(sentences[:2]) + '.'
             
-            # Add formatting for readability
             response = f"{response}\n\n💬 *Want to know more? Just ask!*"
             
+        except TimeoutError:
+            logger.error(f"[INFO_AGENT] ⏰ LLM timeout after 40s - using fallback")
+            response = f"I can help with {selected_service['name'].lower()}. What would you like to know?"
         except Exception as e:
-            print(f"Service response error: {e}")
+            logger.error(f"[INFO_AGENT] ❌ LLM error: {e}")
             response = f"I can help with {selected_service['name'].lower()}. What would you like to know?"
         
+        elapsed = time.time() - agent_start
+        logger.info(f"[INFO_AGENT] ✅ Service response completed in {elapsed:.3f}s")
         state["messages"].append(response)
         state["current_agent"] = "complete"
         return state
         
     else:
-        # Normal conversation - be friendly and supportive (VERY brief)
-        print("💬 Sunny's casual conversation mode")
+        # Normal conversation - be friendly and supportive
+        logger.info("[INFO_AGENT] 💬 Casual conversation mode")
         
         # Build context including conversation history and external context
         context_parts = [f'User said: "{query}"']
         
         # Include recent conversation history for context (last 3 exchanges)
         if len(conversation_history) >= 2:
-            # Get last user message and Sunny's response
             recent_history = "\n".join(conversation_history[-3:])
             context_parts.append(f"Recent conversation:\n{recent_history}")
-            print("📝 Including conversation history for context")
         
         if external_context:
             context_parts.append(external_context)
-            print("🎯 Including external context (assessment suggestion)")
+            logger.info("[INFO_AGENT] 🎯 Including external context")
         
         full_context = '\n\n'.join(context_parts)
         
@@ -343,40 +437,52 @@ What's on your mind today?"""
         is_assessment_suggestion = external_context and "ASSESSMENT_SUGGESTION" in external_context
         
         if is_assessment_suggestion:
-            # SIMPLIFIED PROMPT - removed example responses
             prompt = build_sunny_prompt(
                 agent_type='information',
                 context=full_context,
                 specific_instructions="Suggest the DASS-21 assessment warmly. Explain how it could help them understand their mental health."
             )
         else:
-            # SIMPLIFIED PROMPT - with conversation awareness
             prompt = build_sunny_prompt(
                 agent_type='information',
                 context=full_context,
                 specific_instructions="Respond naturally based on the conversation context. If user affirmed/agreed to something you offered, provide that help. Keep responses warm and concise (2-3 sentences max)."
             )
     
+        # TIMING: LLM generation with timeout
+        llm_start = time.time()
+        logger.info("[INFO_AGENT] 🤖 Starting LLM generation (max_tokens=256, timeout=40s)")
+        
         try:
-            # Generate deterministic seed for consistent responses
             import hashlib
             query_seed = int(hashlib.md5(query.lower().strip().encode()).hexdigest()[:8], 16)
             
-            response = llm.invoke(
-                prompt,
-                config={"configurable": {"seed": query_seed}}
-            ).content.strip()
+            # Call LLM with timeout wrapper
+            response = _invoke_llm_with_timeout(
+                llm=llm,
+                prompt=prompt,
+                seed=query_seed,
+                max_tokens=256,
+                timeout=40
+            )
             
-            # Only apply hard limit for normal responses, not assessment suggestions
+            llm_duration = time.time() - llm_start
+            logger.info(f"[INFO_AGENT] ✅ LLM generation completed in {llm_duration:.3f}s ({len(response)} chars)")
+            
+            # Apply hard limit for normal responses only
             if not is_assessment_suggestion:
-                # VERY hard limit - max 2 sentences
                 sentences = [s.strip() for s in response.split('.') if s.strip()]
                 response = '. '.join(sentences[:2]) + '.' if sentences else "I'm here for you. What's on your mind?"
             
+        except TimeoutError:
+            logger.error(f"[INFO_AGENT] ⏰ LLM timeout after 40s - using fallback")
+            response = f"{sunny['validation_phrases'][0]}. What's on your mind? 💙"
         except Exception as e:
-            print(f"Information agent error: {e}")
+            logger.error(f"[INFO_AGENT] ❌ LLM error: {e}")
             response = f"{sunny['validation_phrases'][0]}. What's on your mind? 💙"
         
+        elapsed = time.time() - agent_start
+        logger.info(f"[INFO_AGENT] ✅ Conversation response completed in {elapsed:.3f}s")
         state["messages"].append(response)
         state["current_agent"] = "complete"
         return state
