@@ -323,8 +323,16 @@ What's on your mind today?"""
         # Normal conversation - be friendly and supportive (VERY brief)
         print("💬 Sunny's casual conversation mode")
         
-        # Build context including external context (assessment suggestions)
+        # Build context including conversation history and external context
         context_parts = [f'User said: "{query}"']
+        
+        # Include recent conversation history for context (last 3 exchanges)
+        if len(conversation_history) >= 2:
+            # Get last user message and Sunny's response
+            recent_history = "\n".join(conversation_history[-3:])
+            context_parts.append(f"Recent conversation:\n{recent_history}")
+            print("📝 Including conversation history for context")
+        
         if external_context:
             context_parts.append(external_context)
             print("🎯 Including external context (assessment suggestion)")
@@ -342,11 +350,11 @@ What's on your mind today?"""
                 specific_instructions="Suggest the DASS-21 assessment warmly. Explain how it could help them understand their mental health."
             )
         else:
-            # SIMPLIFIED PROMPT - removed lengthy instructions
+            # SIMPLIFIED PROMPT - with conversation awareness
             prompt = build_sunny_prompt(
                 agent_type='information',
                 context=full_context,
-                specific_instructions="Respond warmly in 1-2 SHORT sentences."
+                specific_instructions="Respond naturally based on the conversation context. If user affirmed/agreed to something you offered, provide that help. Keep responses warm and concise (2-3 sentences max)."
             )
     
         try:

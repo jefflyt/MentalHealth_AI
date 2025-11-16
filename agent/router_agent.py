@@ -250,7 +250,19 @@ def detect_distress_level(query: str) -> Tuple[str, float]:
     NOTE: This is the ONLY function that should calculate distress scores.
     All other code should call this and cache/reuse the result.
     """
-    query_lower = query.lower()
+    query_lower = query.lower().strip()
+    
+    # OPTIMIZATION: Skip distress detection for simple affirmative/navigation responses
+    simple_responses = [
+        'yes', 'yeah', 'yep', 'yea', 'ya', 'sure', 'okay', 'ok', 'alright',
+        'no', 'nope', 'nah', 'not really', 'maybe', 'idk', 'dunno',
+        '1', '2', '3', '4', '5',  # Menu selections
+        'thanks', 'thank you', 'bye', 'goodbye', 'hi', 'hello', 'hey'
+    ]
+    
+    # If query is ONLY a simple response (no other words), skip distress detection
+    if query_lower in simple_responses:
+        return ('none', 0.0)
     
     # Calculate weighted score
     score = 0
