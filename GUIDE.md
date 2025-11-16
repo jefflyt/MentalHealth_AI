@@ -40,26 +40,27 @@
 
 ## 1. Python Environment Setup
 
-### Current Environment: Python 3.11 with Full Re-ranker Support
+### Current Environment: Python 3.11+ with Remote Embeddings
 
 **Environment Details:**
-- **Python Version**: 3.11.13
-- **Environment Type**: Conda environment (`mentalhealth_py311`)
-- **PyTorch**: 2.2.2 (CPU-optimized)
-- **Sentence-Transformers**: 5.1.2
-- **NumPy**: 1.26.4 (compatible with PyTorch)
+- **Python Version**: 3.11+ (3.13 compatible)
+- **Embeddings**: Remote HuggingFace Hub API (no local models)
+- **Re-ranker**: Disabled by default (optional local installation)
+- **Dependencies**: Minimal (no PyTorch required)
 
 ### Environment Benefits
 
-**✅ Full Re-ranker Support:**
-- Cross-encoder models fully functional
-- ~9ms average re-ranking time
-- Improved query relevance by 15-25%
+**✅ Remote Embeddings (Default):**
+- No local PyTorch/sentence-transformers required
+- Low memory footprint (~50MB vs ~2GB)
+- Fast startup (<5 seconds)
+- Suitable for constrained environments (Render, Heroku, etc.)
 
-**✅ Stable Dependencies:**
-- NumPy 1.x compatibility with PyTorch
-- No dependency conflicts
-- Production-ready stack
+**✅ Optional Re-ranker (Advanced):**
+- Enable with RERANKER_ENABLED=true
+- Requires Python 3.11, PyTorch, sentence-transformers
+- Improves retrieval accuracy by 15-25%
+- Recommended only for high-memory deployments (>1GB RAM)
 
 ### Quick Activation
 
@@ -2907,6 +2908,7 @@ gunicorn -w 4 \
 **Required:**
 ```bash
 GROQ_API_KEY=gsk_your_actual_key_here
+HUGGINGFACE_API_TOKEN=hf_your_token_here
 ```
 
 **Optional:**
@@ -2914,9 +2916,10 @@ GROQ_API_KEY=gsk_your_actual_key_here
 FLASK_SECRET_KEY=your_secret_key_for_sessions
 FLASK_ENV=production
 PORT=5001
+USE_REMOTE_EMBEDDINGS=true  # Default: true (recommended)
 ```
 
-**Re-ranker Configuration (Optional):**
+**Re-ranker Configuration (Advanced - Disabled by Default):**
 ```bash
 # Enable/disable re-ranking
 RERANKER_ENABLED=true

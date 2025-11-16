@@ -189,12 +189,18 @@ MentalHealth_AI/
 
 **Major Enhancement Complete:** +206 chunks (+74% increase)
 
-**🔄 Re-ranker Integration (Enabled):**
-- Cross-encoder based re-ranking for improved relevance
-- Using Python 3.11 with PyTorch and sentence-transformers support
-- Improves retrieval accuracy by 15-25% for complex queries
-- <200ms additional latency with TinyBERT model
-- ~9ms average re-ranking time with excellent query matching
+**🔄 Embeddings Configuration (Remote by Default):**
+- Remote HuggingFace Hub embeddings (no local PyTorch required)
+- Model: sentence-transformers/all-MiniLM-L6-v2 (384 dimensions)
+- Requires HUGGINGFACE_API_TOKEN environment variable
+- Low memory footprint (~50MB vs ~2GB for local models)
+- Suitable for deployment on constrained environments (Render, etc.)
+
+**🔄 Re-ranker (Disabled by Default):**
+- Optional cross-encoder re-ranking (requires local PyTorch installation)
+- Enable with RERANKER_ENABLED=true for 15-25% better relevance
+- Requires Python 3.11 and >1GB RAM
+- Use only when deploying to environments with sufficient resources
 
 **Original Categories (~279 chunks):**
 - **Mental Health Info**: Anxiety, depression, stress basics
@@ -235,10 +241,10 @@ MentalHealth_AI/
 | **Tools** | 5 specialized LangChain tools |
 | **Vector DB** | ChromaDB (persistent) |
 | **Retriever** | LangChain Chroma |
-| **Embeddings** | HuggingFace all-MiniLM-L6-v2 (384d) |
-| **Re-ranker** | Cross-encoder TinyBERT (optional) |
+| **Embeddings** | Remote HuggingFace Hub (all-MiniLM-L6-v2, 384d) |
+| **Re-ranker** | Disabled by default (optional cross-encoder) |
 | **Web** | Flask 3.0 |
-| **Python** | 3.11.13 (conda environment) |
+| **Python** | 3.11+ (no local PyTorch required) |
 
 ## 📊 System Stats
 
@@ -368,17 +374,17 @@ Try these in the web interface:
 
 ## 📖 Documentation
 
-- **[QUICKSTART.md](QUICKSTART.md)** - Setup and run guide (5 minutes - START HERE!)
+- **[README.md](README.md)** - This file (project overview and quick setup)
 - **[GUIDE.md](GUIDE.md)** - Complete technical guide
-  - Agent architecture and routing logic
-  - LangChain components (Chains, Memory, Tools)
-  - Web interface setup and customization
-  - Knowledge base management (manual + web scraping)
-  - Deployment options and best practices
-  - API reference and troubleshooting
-- **[README.md](README.md)** - This file (project overview)
-- **[IMPLEMENTATION_SUMMARY.md](IMPLEMENTATION_SUMMARY.md)** - LangChain implementation details
-- **[LANGCHAIN_QUICKSTART.md](LANGCHAIN_QUICKSTART.md)** - LangChain usage guide
+  - Python environment setup (section 1)
+  - Agent architecture and routing logic (section 2)
+  - LangChain components: Chains, Memory, Tools (section 3)
+  - Web interface setup and customization (section 4)
+  - Knowledge base management (section 5)
+  - Deployment options and best practices (section 6)
+  - Customization (section 7)
+  - API reference (section 8)
+  - Troubleshooting (section 9)
 
 ## 🔐 Security & Safety
 
@@ -402,13 +408,33 @@ Try these in the web interface:
 
 ## 🚀 Getting Started
 
-1. **Read [QUICKSTART.md](QUICKSTART.md)** to understand the workflow
-2. **Prepare the Python 3.11 environment**: run `source activate_env.sh` to create/activate `mentalhealth_py311` (Python 3.11.13), install `requirements.txt`, and ensure PyTorch + sentence-transformers are available
-3. **Start the app**: `python run_web.py`
-4. **Open browser**: http://localhost:5001
-5. **Start chatting!**
+### Quick Setup (5 minutes)
 
-For detailed technical information, see **[GUIDE.md](GUIDE.md)**.
+1. **Get API Keys**:
+   - Groq API key: https://console.groq.com/ (free)
+   - HuggingFace token: https://huggingface.co/settings/tokens (required for embeddings)
+
+2. **Set environment variables**:
+   ```bash
+   echo "GROQ_API_KEY=your_groq_key_here" > .env
+   echo "HUGGINGFACE_API_TOKEN=hf_your_token_here" >> .env
+   # Optional: USE_REMOTE_EMBEDDINGS=true (default)
+   # Optional: RERANKER_ENABLED=false (default)
+   ```
+
+3. **Install dependencies**:
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+4. **Run the app**:
+   ```bash
+   python run_web.py
+   ```
+
+5. **Open browser**: http://localhost:5001
+
+**For detailed setup, deployment, and troubleshooting, see [GUIDE.md](GUIDE.md)**.
 
 ## 🤝 Contributing
 
