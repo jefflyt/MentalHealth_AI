@@ -112,7 +112,7 @@ MentalHealth_AI/
 │   ├── breathing_tool.py       # Breathing exercises
 │   └── mood_tool.py            # Mood tracking
 │
-├── agent/                      # 🤖 AI Agents (8 modules)
+├── agent/                      # 🤖 AI Agents (12 modules)
 │   ├── router_agent.py         # Query routing
 │   ├── crisis_agent.py         # Crisis intervention
 │   ├── information_agent.py    # Mental health education
@@ -249,7 +249,7 @@ MentalHealth_AI/
 ## 📊 System Stats
 
 - **Total Lines**: ~10,500+
-- **Agent Modules**: 10 files (including re-ranker and helpers)
+- **Agent Modules**: 12 files (router, crisis, information, resource, assessment, escalation, sunny_persona, helpers, reranker, update_agent, __init__.py)
 - **Chains**: 4 (RAG, Conversation, Router, Crisis)
 - **Tools**: 5 (Assessment, Resources, Crisis, Breathing, Mood)
 - **Helper Functions**: 8 integration utilities

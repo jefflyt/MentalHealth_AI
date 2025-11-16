@@ -122,7 +122,9 @@ agent/
 ├── resource_agent.py       # Singapore services
 ├── assessment_agent.py     # DASS-21 screening
 ├── escalation_agent.py     # Professional referrals
-├── reranker.py            # Re-ranker (optional)
+├── sunny_persona.py        # Shared personality system
+├── helpers.py              # Integration utilities
+├── reranker.py             # Re-ranker (optional)
 └── update_agent.py         # Knowledge base updates
 ```
 
@@ -778,13 +780,13 @@ Re-ranked results (semantic relevance):
 - Need to distinguish context-specific relevance
 - Mental health queries with overlapping terms
 
-#### Current Status: Fully Enabled
+#### Current Status: Disabled by Default
 
-**✅ Production Ready:**
-- Re-ranker enabled by default (`RERANKER_ENABLED=true`)
-- All dependencies installed and functional
-- PyTorch 2.2.2 with sentence-transformers 5.1.2
-- NumPy 1.26.4 compatibility resolved
+**✅ Production Ready (Optional):**
+- Re-ranker disabled by default (`RERANKER_ENABLED=false`)
+- Optional dependencies (sentence-transformers, torch) commented out in requirements.txt
+- Enable by uncommenting dependencies and setting `RERANKER_ENABLED=true`
+- When enabled: PyTorch 2.2.2 with sentence-transformers 5.1.2
 
 **Performance Metrics (Current):**
 - Average re-ranking time: ~9ms per query
